@@ -1,39 +1,63 @@
 import requests
-from bs4 import BeautifulSoup
 import csv
 
-# определяем новый ли пост
-def biglion_find_new_post(post, last_post):
-    # преобразование входных номеров постов в строку для их дальнейшего разделения: 4173332 -> 417  3332
-    post_string = str(post)
-    last_post_string = str(last_post)
-    # получаем длину номера поста, если в будущем увеличется разряд
-    post_length = len(post_string) 
-    last_post_length = len(last_post_string)
-    if (int(post_string[0:post_length-4]) >= int(last_post_string[0:last_post_length-4])) & \
-        (int(post_string[post_length-4:post_length+1]) < int(last_post_string[last_post_length-4:last_post_length+1])):
-        print('Yes')
-    else: 
-        print('No')
+# запись в csv данных о мероприятиях
+def write_csv(data):
+    with open('event_list.csv', 'a', newline = '') as f:
+        writer = csv.writer(f, delimiter = ',')
 
-# получаем текст парсируемой страницы 
-def get_html(url):
+        writer.writerow( (data['id'],
+                         data['image_post'],
+                         data['title_post'],
+                         data['url_post'],
+                         data['price_discounted'],
+                         data['price_post'],
+                         data['discount_post'],
+                         data['metro_post']) )
+
+
+# получаем словарь данных с биглиона 
+def get_json(url):
     r = requests.get(url)
-    return r.text
+    return r.json()
 
-# получаем данные по каждому мероприятию на странице
-def get_html_data(html):
-    soup = BeautifulSoup(html, 'lxml')
-
-    ads = soup.find('div', class_='catalog__deals').find_all('div', class_ = 'card-item')
+# получаем данные по каждому мероприятию
+def get_data(json_text):
+    # получаем id последнего проверенного мероприятия
+    # потом надо через with
+    last_post = int(open('last_post_biglion.txt').read())
+    ads = json_text['data']['dealOffers']
+    
+    new_last_post = ads[0]['id']
+    print(type(new_last_post),type(last_post))
 
     for ad in ads:
+        if ad['id'] == last_post:
+            break
+        id  = ad['id']
+        image_post = ad['image']
+        title_post = ad['title']
+        url_post = ad['url'] 
+        price_discounted = ad['priceDiscounted']
+        price_post = ad['price']
+        discount_post = ad['discount']
+        metro_post = ad['locations'][0]['metro']          
+
+        data_post = {'id': id, 'image_post': image_post, 'title_post': title_post, 'url_post': url_post, \
+            'price_discounted': price_discounted, 'price_post': price_post, 'discount_post': discount_post, \
+            'metro_post': metro_post}
+
+        write_csv(data_post)  
+ 
+        
+
 
 
 def main():
-    url = 'https://speterburg.biglion.ru/services/?category=131&pageNum=1&perPage=30&sortType=start_date&sortDirection=desc'
-    html = get_html(url)
-    get_html_data(html) 
+    # в url возможно необходимо добавить фильтр
+    url = 'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&per_page=60&category=131'
+    json_text = get_json(url)
+    get_data(json_text) 
 
 
 if __name__ == '__main__':
