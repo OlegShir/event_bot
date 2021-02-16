@@ -1,5 +1,6 @@
 import requests
 import csv
+import constant
 
 # запись в csv данных о мероприятиях
 def write_csv(data):
@@ -13,8 +14,8 @@ def write_csv(data):
                          data['price_discounted'],
                          data['price_post'],
                          data['discount_post'],
-                         data['metro_post']) )
-
+                         data['metro_post'],
+                         data['disc']) )
 
 # получаем словарь данных с биглиона 
 def get_json(url):
@@ -45,11 +46,20 @@ def get_data(json_text):
         price_discounted = ad['priceDiscounted']
         price_post = ad['price']
         discount_post = ad['discount']
-        metro_post = ad['locations'][0]['metro']          
+        metro_post = ad['locations'][0]['metro'] 
+        
+        try: 
+            disc = constant.tuple_district[constant.dictonary_metro[metro_post]]  
+        except:
+            metro_post = ad['locations'][0]['address'] 
+            if metro_post == "РФ":
+                disc = 'Онлаин'
+            else:
+                disc = 'None'
 
         data_post = {'id': id, 'image_post': image_post, 'title_post': title_post, 'url_post': url_post, \
             'price_discounted': price_discounted, 'price_post': price_post, 'discount_post': discount_post, \
-            'metro_post': metro_post}
+            'metro_post': metro_post, 'disc': disc}
 
         write_csv(data_post) 
 
