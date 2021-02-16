@@ -25,14 +25,17 @@ def get_json(url):
 def get_data(json_text):
     # получаем id последнего проверенного мероприятия
     # потом надо через with
-    last_post = int(open('last_post_biglion.txt').read())
+
+    last_post = open('last_post_biglion.txt', 'r+')
+    id_last_post = int(last_post.read()) 
+
     ads = json_text['data']['dealOffers']
     
     new_last_post = ads[0]['id']
-    print(type(new_last_post),type(last_post))
+    print(type(new_last_post),type(id_last_post))
 
     for ad in ads:
-        if ad['id'] == last_post:
+        if ad['id'] == id_last_post:
             break
         id  = ad['id']
         image_post = ad['image']
@@ -47,15 +50,17 @@ def get_data(json_text):
             'price_discounted': price_discounted, 'price_post': price_post, 'discount_post': discount_post, \
             'metro_post': metro_post}
 
-        write_csv(data_post)  
- 
+        write_csv(data_post) 
+    last_post.seek(0)
+    last_post.write(str(new_last_post))
+    last_post.close()
         
 
 
 
 def main():
     # в url возможно необходимо добавить фильтр
-    url = 'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&per_page=60&category=131'
+    url = 'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc'
     json_text = get_json(url)
     get_data(json_text) 
 
