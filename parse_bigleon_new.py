@@ -32,7 +32,8 @@ def get_data(json_text):
     ads = json_text['data']['dealOffers']
     
     new_last_post = ads[0]['id']
-    print(type(new_last_post),type(id_last_post))
+
+    # print(type(new_last_post),type(id_last_post))
 
     for ad in ads:
         if ad['id'] == id_last_post:
@@ -51,6 +52,7 @@ def get_data(json_text):
             'metro_post': metro_post}
 
         write_csv(data_post) 
+
     last_post.seek(0)
     last_post.write(str(new_last_post))
     last_post.close()
