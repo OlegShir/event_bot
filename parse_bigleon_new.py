@@ -1,6 +1,7 @@
 import requests
 import csv
 import constant
+from sqlighter import SQLighter
 
 # получаем адрес расположение мероприятия
 def location_adress(id):
@@ -17,22 +18,6 @@ def location_adress(id):
             
     return short_adres.lstrip()
 
-# запись в csv данных о мероприятиях
-def write_csv(data):
-    with open('event_list.csv', 'a', newline = '') as f:
-        writer = csv.writer(f, delimiter = ',')
-
-        writer.writerow( (data['id'],
-                         data['image_post'],
-                         data['title_post'],
-                         data['url_post'],
-                         data['price_discounted'],
-                         data['price_post'],
-                         data['discount_post'],
-                         data['adres'],
-                         data['metro_post'],
-                         data['disc']) )
-
 # получаем словарь данных с биглиона 
 def get_json(url):
     r = requests.get(url)
@@ -40,59 +25,64 @@ def get_json(url):
 
 # получаем данные по каждому мероприятию
 def get_data(json_text):
+    # подключаемся к БД
+    db = SQLighter('event_parse.db')
+    
     # получаем id последнего проверенного мероприятия
-    # потом надо через with
-
-    last_post = open('last_post_biglion.txt', 'r+')
-    id_last_post = int(last_post.read()) 
+    id_last_post = db.get_last_post('bigleon')
     
     # список словарей всех мероприятий 
     ads = json_text['data']['dealOffers']
     
     # сохраняем id первого мероприятия в полученном списке
-     
     new_last_post = ads[0]['id']
 
-    # print(type(new_last_post),type(id_last_post))
+    # создаем пустой список для дальшейшего добавления в него мероприятий
+    events= []
 
     for ad in ads:
+        # производим сравнение id каждого мероприятия с последним обработанным (записанным)
         if ad['id'] == id_last_post:
             break
-        id  = ad['id']
-        image_post = ad['image']
-        title_post = ad['title']
-        url_post = ad['url'] 
-        price_discounted = ad['priceDiscounted']
-        price_post = ad['price']
-        discount_post = ad['discount']
+        # производим получение данных из json для БД
+        id_parse  = ad['id']
+        type_event = ad['categoryTitle']
+        img = ad['image']
+        title = ad['title']
+        cost = ad['price']
+        discounted = ad['priceDiscounted']
         try:
-            adres = location_adress(id)
+            # получаем адрес по id мероприятия путем http запроса
+            address = location_adress(id_parse)
         except:
-            adres = 'None'
-
-        metro_post = ad['locations'][0]['metro'] 
-        
+            # если адреса нет, то это онлайн-мероприятие или где-то в лесу 
+            address = 'None'
+        metro = ad['locations'][0]['metro'] 
         try: 
-            disc = constant.tuple_district[constant.dictonary_metro[metro_post]]  
+            # проводим поиск станции метро в словаре constant.py
+            district = constant.tuple_district[constant.dictonary_metro[metro]]  
         except:
-            metro_post = ad['locations'][0]['address'] 
-            if metro_post == "РФ":
-                disc = 'Онлаин'
+            # метро для онлайн-мероприятий имеет значение РФ
+            metro = ad['locations'][0]['address'] 
+            if metro == "РФ":
+                district = 'Онлаин'
             else:
-                disc = 'None'
-
-        data_post = {'id': id, 'image_post': image_post, 'title_post': title_post, 'url_post': url_post, \
-            'price_discounted': price_discounted, 'price_post': price_post, 'discount_post': discount_post, \
-            'adres': adres, 'metro_post': metro_post, 'disc': disc}
-
-        write_csv(data_post) 
-
-    last_post.seek(0)
-    last_post.write(str(new_last_post))
-    last_post.close()
+                # в случае ошибки  
+                district = 'None'
+        link = ad['url'] 
         
+        # добавляем мероприятие в список
+        events.append((id_parse, type_event, img, title, cost, discounted, address, metro, district, link))
+    
+    # если список мероприятий не пустой
+    if len(events) != 0:
+        # записываем id последнего мероприятия
+        db.update_last_post(new_last_post, 'bigleon')
 
-
+        # записываем мероприятия в БД
+        db.write_events(events)
+        
+    db.close()
 
 def main():
     # в url возможно необходимо добавить фильтр
