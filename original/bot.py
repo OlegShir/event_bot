@@ -13,11 +13,11 @@ bot = Bot(token='1535163103:AAG-Xv6Wki6pT878EPe6xNapmWoQ8jeL5n8')
 dp = Dispatcher(bot)
 
 # иницилизация картинок эмодзи в описании события 
-price = emoji.emojize(":moneybag: ", use_aliases=True)
-metro = emoji.emojize(":metro: м. ", use_aliases=True)
-adress = emoji.emojize(":world_map: ", use_aliases=True)
-raiting = emoji.emojize(":star: :", use_aliases=True)
-link = emoji.emojize(":link: ", use_aliases=True)
+price = emoji.emojize(":moneybag: ", use_aliases = True)
+metro = emoji.emojize(":metro: м. ", use_aliases = True)
+adress = emoji.emojize(":world_map: ", use_aliases = True)
+raiting = emoji.emojize(":star: ", use_aliases = True)
+link = emoji.emojize(":link: ", use_aliases = True)
 
 link_event = 'https://speterburg.biglion.ru/deals/spa-programma-vibiray2-54/'
 title_event = 'SPA-программа «Май», «Пляж», «Сила камня», «Восточная сказка», «Сладкие грезы», «Тайский шепот» в салоне Simmetria SPA'
