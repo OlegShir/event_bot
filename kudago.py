@@ -1,79 +1,86 @@
 import requests
-import csv
 import constant
+from sqlighter import SQLighter
 
-# запись в csv данных о мероприятиях
-def write_csv(data):
-    with open('event_kudago.csv', 'a', newline = '') as f:
-        writer = csv.writer(f, delimiter = ',')
-
-        writer.writerow( (data['id'],
-                         data['image_post'],
-                         data['title_post'],
-                         data['url_post'],
-                         data['price_discounted'],
-                         data['price_post'],
-                         data['discount_post'],
-                         data['metro_post'],
-                         data['disc']) )
-
-# получаем словарь данных с биглиона 
-def get_json(url):
+# получаем json ответ с сайта  
+def get_html(url):
     r = requests.get(url)
-    return r.json()
+    return r
 
 # получаем данные по каждому мероприятию
-def get_data(json_text):
+def get_data(html):
+
+    # подключаемся к БД
+    db = SQLighter('event_parse.db')
+
     # получаем id последнего проверенного мероприятия
-    # потом надо через with
+    id_last_post = db.get_last_post('kudago')
 
-    last_post = open('last_post_kudago.txt', 'r+')
-    id_last_post = int(last_post.read()) 
-
-    ads = json_text['results']
+    json_html = html.json()
     
+    # список словарей всех мероприятий 
+    ads = json_html['results']
+
+    # сохраняем id первого мероприятия в полученном списке
     new_last_post = ads[0]['id']
 
-    # print(type(new_last_post),type(id_last_post))
+    # создаем пустой список для дальшейшего добавления в него мероприятий
+    events= []
 
     for ad in ads:
+        # производим сравнение id каждого мероприятия с последним обработанным (записанным)
         if ad['id'] == id_last_post:
             break
-        id  = ad['id']
-        image_post = ad['images'][0]['thumbnails']['640x384']
-        title_post = ad['title']
-        url_post = ad['site_url'] 
-        price_discounted = 0
-        price_post = ad['price']
-        discount_post = 0
+        # производим получение данных из json для БД
+        id_parse  = ad['id']
+
+        type_event_kudago = ad['categories'][0]
+        type_event = constant.dictonary_event_kudago[type_event_kudago]
+
+        img = ad['images'][0]['thumbnails']['640x384']
+        title = ad['title']
+        cost = ad['price']
+        discounted = 0
         try:
-            metro_post = ad['place']['subway'] 
+            address = metro = ad['place']['address'] 
         except:
-            metro_post = 'None'
+            address = None
+        try:
+            metro_list = ad['place']['subway'] 
+            metro = metro_list.split(', ')[0]
+        except:
+            metro = None
         
-        try: 
-            disc = constant.tuple_district[constant.dictonary_metro_lower[metro_post.lower()]]  
+        link = ad['site_url'] 
+        try:
+            date_start = ad['dates'][0]['start_date']
+            data_start = constant.re_format_kudago(date_start)
         except:
-            disc = 'None'
+            data_start = None
+        try:
+            data_stop = len(ad['dates'])
+        except:
+            data_stop = None
+        
+        # добавляем мероприятие в список
+        events.append((id_parse, type_event, img, title, data_start, data_stop, cost, discounted, address, metro, link))
 
-        data_post = {'id': id, 'image_post': image_post, 'title_post': title_post, 'url_post': url_post, \
-            'price_discounted': price_discounted, 'price_post': price_post, 'discount_post': discount_post, \
-            'metro_post': metro_post, 'disc': disc}
+    # если список мероприятий не пустой
+    if len(events) != 0:
+        # записываем id последнего мероприятия
+        db.update_last_post(new_last_post, 'kudago')
 
-        write_csv(data_post) 
-
-    last_post.seek(0)
-    last_post.write(str(new_last_post))
-    last_post.close()
-
+        # записываем мероприятия в БД
+        db.write_events(events)
+    db.close()
 
 
 
 def main():
     # в url
-    url = 'https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,,dates,site_url&fields=id,title,price,place,images,dates,site_url'
-    json_text = get_json(url)
-    get_data(json_text) 
+    url = 'https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url'
+    html = get_html(url)
+    get_data(html) 
 
 
 if __name__ == '__main__':

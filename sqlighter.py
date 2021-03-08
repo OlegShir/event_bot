@@ -12,7 +12,6 @@ class SQLighter:
         """Получение последнего обработанного поста с сайта"""
         with self.connection:
             result = self.cursor.execute("SELECT id_post FROM last_post WHERE website = ?", (website,)).fetchone()
-            print(result, type(result))
             return int(result)
     
     def update_last_post(self, new_last_post, website):
@@ -24,7 +23,7 @@ class SQLighter:
     def write_events(self, events):
         """Записываем список мероприятий в БД"""
         with self.connection:
-            return self.cursor.executemany("INSERT INTO event(id_parse, type, img, title, cost, discounted, address, metro, district, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", events)
+            return self.cursor.executemany("INSERT INTO event(id_parse, type, img, title, data_start, data_stop, cost, discounted, address, metro,  link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", events)
 
     def close(self):
         """Закрываем соединение с БД"""
