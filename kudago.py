@@ -53,17 +53,23 @@ def get_data(html):
         
         link = ad['site_url'] 
         try:
-            date_start = ad['dates'][0]['start_date']
-            data_start = constant.re_format_kudago(date_start)
+            date_start_info = ad['dates'][0]['start_date']
+            date_start = constant.re_format_kudago(date_start_info)
         except:
-            data_start = None
+            date_start = None
         try:
-            data_stop = len(ad['dates'])
+            count_date_length = len(ad['dates'])
+            if count_date_length == 1:
+                date_stop_info =  ad['dates'][0]['end_date'] 
+            else:
+                date_stop_info =  ad['dates'][count_date_length-1]['start_date']
+            date_stop = constant.re_format_kudago(date_stop_info)
         except:
-            data_stop = None
-        
+            date_stop = None
+        if date_start == date_stop:
+            date_stop = None
         # добавляем мероприятие в список
-        events.append((id_parse, type_event, img, title, data_start, data_stop, cost, discounted, address, metro, link))
+        events.insert(0, (id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, link))
 
     # если список мероприятий не пустой
     if len(events) != 0:
