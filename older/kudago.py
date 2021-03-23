@@ -14,7 +14,8 @@ def get_data(html):
     db = SQLighter('event_parse.db')
 
     # получаем id последнего проверенного мероприятия
-    id_last_post = db.get_last_post('kudago')
+    #id_last_post = db.get_last_post('kudago')
+    id_last_post = 2
 
     json_html = html.json()
     
@@ -70,7 +71,6 @@ def get_data(html):
             date_stop = None
         # добавляем мероприятие в список
         events.insert(0, (id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, link))
-
     # если список мероприятий не пустой
     if len(events) != 0:
         # записываем id последнего мероприятия
