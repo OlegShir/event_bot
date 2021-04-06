@@ -24,7 +24,7 @@ dictonary_district = ('Адмиралтейский', 'Василеостров�
 dictonary_event_kudago = {
     "business-events": "Разное",
     "cinema": "Развлечения",
-    "concert": "Концерты",
+    "concert": "Концерт",
     "education": "Обучение",
     "entertainment": "Развлечения",
     "exhibition": "Выставки",
@@ -40,7 +40,7 @@ dictonary_event_kudago = {
     "shopping": "Товары",
     "social-activity": "Разное",
     "stock": "Товары",
-    "theater": "Концерты",
+    "theater": "Театр",
     "tour": "Экскурсии",
     "yarmarki-razvlecheniya-yarmarki": "Развлечения"
 }
@@ -52,8 +52,8 @@ dictonary_event_biglion = {
     'Развлечения': 'Развлечения',
     'Обучение': 'Обучение',
     'Авто': 'Товары',
-    'Фитнес': 'Здоровье',
-    'Концерты': 'Концерты',
+    'Фитнес': 'Спорт',
+    'Концерты': 'Концерт',
     'Дети': 'Детям',
     'Разное': 'Разное'
 }
@@ -73,7 +73,7 @@ link = emoji.emojize(":link: ", use_aliases=True)  # 🔗
 dictonary_icon_event = {
              'Развлечения': emoji.emojize(":ferris_wheel:", use_aliases=True), # 🎡
              'Обучение': emoji.emojize(":mortar_board:", use_aliases=True), # 🎓
-             'Концерты': emoji.emojize(":ticket:", use_aliases=True), # 🎫
+             'Концерт': emoji.emojize(":ticket:", use_aliases=True), # 🎫
              'Детям': emoji.emojize(":boy:" + ":girl:", use_aliases=True), # 👦👧
              'Разное': emoji.emojize(":cyclone:", use_aliases=True), # 🌀
              'Товары': emoji.emojize(":shopping_bags:", use_aliases=True), # 🛍️
@@ -82,6 +82,9 @@ dictonary_icon_event = {
              'Рестораны': emoji.emojize(":ice_cream:", use_aliases=True), # 🍨
              'Отдых': emoji.emojize(":desert_island:", use_aliases=True), # 🏝️
              'Выставки': emoji.emojize(":frame_with_picture:", use_aliases=True), # 🖼️
-             'Экскурсии': emoji.emojize(":classical_building:", use_aliases=True) # 🏛️
+             'Экскурсии': emoji.emojize(":classical_building:", use_aliases=True), # 🏛️
+             'Театр': emoji.emojize(":dolls:", use_aliases=True), # 🎎
+             'Спорт': emoji.emojize(":first_place_medal:", use_aliases=True), # 🥇
+             'Туристам': emoji.emojize(":man_walking:", use_aliases=True) # 🚶‍♂️
 }
 

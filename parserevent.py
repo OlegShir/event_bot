@@ -3,32 +3,38 @@ import constant
 from sqlighter import SQLighter
 from bs4 import BeautifulSoup as bs
 import lxml
-
+import json
+import re
 
 class ParserEvent:
     #parse_methods = {'kudago': self.parse_kudago, 'biglion': parse_bigleon}
 
     def __init__(self):
         self.web_sites = {'kudago': 'https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', \
-                          'biglion': 'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc'}
-        
+                          'biglion':'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', \
+                          'kassir_koncert' : 'https://spb.kassir.ru/bilety-na-koncert?sort=1', \
+                          'kassir_teatr' :   'https://spb.kassir.ru/bilety-v-teatr?sort=1', \
+                          'kassir_detyam':   'https://spb.kassir.ru/detskaya-afisha?sort=1' \
+                          
+        }
+
     def get_html(self, url):
-        r = requests.get(url)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'}
+        r = requests.get(url, headers = headers)
         return r
  
-    # преодразователь даты kudago 01-12-2021 -> 1 марта 2021
-    def re_format_kudago(self, date):
+    # преодразователь даты kudago 01-03-2021 -> 1 марта 2021
+    def re_format_kudago_and_kassir(self, date):
+        # обрезаем длинный формат даты события (кассир)
+        if len(date) > 10:
+            # '2021-04-28 20:00:00' -> '2021-04-28'
+            date =  date[0:10]
         list_date = date.split('-')
         # удаление нуля в числе 
         number = int(list_date[2])
         re_format_date = str(number) + " " + constant.date_format_kudago[int(list_date[1])-1] + " " + list_date[0]
         return re_format_date
     
-    # преобразователь в верхний регистр только первой буквы строки "концект Кота и СОБАКИ" -> "Концерт Кота и СОБАКИ"
-    def first_word_upper(self, title):
-        title_sep = title.split(' ')
-
-
     # получаем адрес расположение мероприятия для биглиона
     def data_event(self, url):
         html = self.get_html(url)
@@ -40,7 +46,7 @@ class ParserEvent:
         data_stop = info_data[1].get_text()
 
         return data_start, data_stop
-
+    
     def parse_kudago(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
@@ -75,7 +81,7 @@ class ParserEvent:
             link = ad['site_url'] 
             try:
                 date_start_info = ad['dates'][0]['start_date']
-                date_start = self.re_format_kudago(date_start_info)
+                date_start = self.re_format_kudago_and_kassir(date_start_info)
             except:
                 date_start = None
             try:
@@ -84,7 +90,7 @@ class ParserEvent:
                     date_stop_info =  ad['dates'][0]['end_date'] 
                 else:
                     date_stop_info =  ad['dates'][count_date_length-1]['start_date']
-                date_stop = self.re_format_kudago(date_stop_info)
+                date_stop = self.re_format_kudago_and_kassir(date_stop_info)
             except:
                 date_stop = None
             if date_start == date_stop:
@@ -138,6 +144,96 @@ class ParserEvent:
             event.append((id_parse, type_event, img, title, data_start, data_stop, cost, discounted, address, metro, full_link))
         return event, new_last_post
 
+    def parse_kassir(self, last_post, html):
+        
+        # парсинг сайта KASSIR.RU осуществляется через библиотеку BeautifulSoup. Парсятся четыре веб-страницы: концерты,
+        # театр, спорт и детям. Нужная информация содержится в div с классом "col-xs-2" и 'event', а также в script от  
+        # https://schema.org с аттрибутом "application/ld+json"
+    
+        # оставляем от запроса только текст
+        text_html = html.text
+        # варим суп текста страницы
+        soup_html = bs(text_html, 'html.parser')
+        # находим в супе дивы с классом "col-xs-2", содержащие события
+        soup_events = soup_html.find_all('div', class_="col-xs-2")
+        # сохраняем id первого мероприятия в полученном списке
+        # создаем пустой список для дальшейшего добавления в него мероприятий
+        new_last_post = last_post
+        event = []
+        # обрабатываем каждое событие с второго - нулевого нет, первое - реклама
+        for number, soup_event in enumerate(soup_events[2:22]):
+            # получаем первую часть информации о событии: id, цена, дата, тип 
+            json_string = soup_event.find('div', class_='event').attrs['data-ec-item']
+            
+            # пробуем получить словарь из json_string
+            try: 
+                first_part_event = json.loads(json_string)
+            # в json_string возможно будут исключения типа "" -> удаляем их
+            except:
+                try:
+                    new_json_string = re.sub(r'[^:]""',' ', json_string).replace(' "', ' ').replace('" ', ' ')
+                    first_part_event = json.loads(new_json_string)
+                except:
+                    continue
+            print(first_part_event)
+            print(number)
+            # id события
+            id_parse = first_part_event['id']
+            # производим сравнение id каждого мероприятия с последним обработанным (записанным)
+            if id_parse == last_post:
+                break
+            # сохраняем id первого мероприятия в полученном списке
+            if number == 0:
+                new_last_post = id_parse
+            # минимальная и максимальная стоимость события
+            min_cost = first_part_event['minPrice']
+            max_cost = first_part_event['maxPrice']
+            # формируем строку стоимости
+            if min_cost == max_cost:
+                cost = str(max_cost) + ' рублей'
+            else:
+                cost = 'от ' + str(min_cost) + ' до ' + str(max_cost) + ' рублей'
+            # дата события
+            date = first_part_event['date']
+            # если дата события не один день, то она хранится в виде словаря
+            if type(date) == dict:
+                date_start = self.re_format_kudago_and_kassir(first_part_event['date']['start_min'])
+                date_stop = self.re_format_kudago_and_kassir(first_part_event['date']['start_max'])
+            # если один день
+            else:
+                date_start = self.re_format_kudago_and_kassir(date)
+                date_stop = None
+            # категория
+            type_event = first_part_event['category']
+
+            # получаем вторую часть информации о событии в script: image, title, address, link 
+            try:
+                second_part_event = json.loads(str(soup_event.find('script', type="application/ld+json").string))
+            except:
+                continue
+            # ссылка на изображения события
+            img = second_part_event['image']
+            # название события
+            title = second_part_event['name']
+            discounted = 0
+            # адрес проведения события
+            address_place = second_part_event['location']['address']
+            # проверяем наличие годода Санк-Петербург в адресе
+            if address_place.startswith('Санкт'):
+                # если есть убираем
+                address_spb = address_place.split(', ')
+                address_place = ', '.join(address_spb[1:])
+            # добавляем перед адресом название места проведения события
+            address = second_part_event['location']['name'] + ", " + address_place
+            # МЕТРО В РАЗРАБОТКЕ
+            metro = None
+            # ссылка на событие
+            full_link = second_part_event['url']
+            # добавляем мероприятие в список
+            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+            print(id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link)
+        print(event)
+        return event, new_last_post
 
     def main_parse(self):
         db = SQLighter('event_parse.db')
@@ -155,6 +251,8 @@ class ParserEvent:
                 event, new_last_post = self.parse_kudago(last_post, html)
             elif key == 'biglion':
                 event, new_last_post = self.parse_bigleon(last_post, html)
+            elif (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
+                event, new_last_post = self.parse_kassir(last_post, html)
             # если есть новые мероприятия на сайте 
             if len(event) != 0:
                 # записываем id последнего мероприятия

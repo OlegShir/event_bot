@@ -3,6 +3,7 @@ import logging
 import asyncio
 from datetime import datetime
 from aiogram import Bot, Dispatcher, executor, types
+import aiogram.utils.markdown as fmt
 
 from sqlighter import SQLighter
 from parserevent import ParserEvent
@@ -58,7 +59,7 @@ async def scheduled(wait_for):
 		if (new_events):
 			# для каждого мероприятия
 			for event in new_events:
-				print(event)
+				print(len(event)) 
 				# в будущем здесь реализуется фильтр по типу мероприятия -> тип события
 				subscriptions = db.get_subscriptions()
 				# получаем ссылку на фотографию события
@@ -67,15 +68,19 @@ async def scheduled(wait_for):
 				photo_info = dict(await bot.send_photo(435001186, photo_url))
 				# получаем id фото на сервере Телеграмма -> ссылка
 				file_id = photo_info['photo'][0]['file_id']
+				photo_size_width = photo_info['photo'][0]['width']
+				photo_size_height = photo_info['photo'][0]['height']
 				# форматирование сообщения
 				beauty = BeautyCaption(event)
 				caption_event = beauty.get_caption()
-				print(caption_event)
-								
-				# рассылаем событие каждому пользователю (не более 30 в секунду)
-				for user in subscriptions:
-					await bot.send_photo(user[1], file_id, caption = caption_event, parse_mode="HTML")
-						  
+				
+				if photo_size_height >= photo_size_width:
+					for user in subscriptions:
+						await bot.send_message(user[1], f"{fmt.hide_link(photo_url)}"+ caption_event, parse_mode=types.ParseMode.HTML)
+				else:
+					for user in subscriptions:
+						await bot.send_photo(user[1], file_id, caption = caption_event, parse_mode=types.ParseMode.HTML)
+ 
 
 if __name__ == '__main__':
 	loop = asyncio.get_event_loop()
