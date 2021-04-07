@@ -10,11 +10,12 @@ class ParserEvent:
     #parse_methods = {'kudago': self.parse_kudago, 'biglion': parse_bigleon}
 
     def __init__(self):
-        self.web_sites = {'kudago': 'https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', \
-                          'biglion':'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', \
-                          'kassir_koncert' : 'https://spb.kassir.ru/bilety-na-koncert?sort=1', \
+        self.web_sites = {'kudago':          'https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', \
+                          'biglion':         'https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', \
+                          'kassir_koncert':  'https://spb.kassir.ru/bilety-na-koncert?sort=1', \
                           'kassir_teatr' :   'https://spb.kassir.ru/bilety-v-teatr?sort=1', \
-                          'kassir_detyam':   'https://spb.kassir.ru/detskaya-afisha?sort=1' \
+                          'kassir_detyam':   'https://spb.kassir.ru/detskaya-afisha?sort=1',
+                          'fiesta':          'https://www.fiesta.ru/spb/novelty/events/'\
                           
         }
 
@@ -22,6 +23,22 @@ class ParserEvent:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'}
         r = requests.get(url, headers = headers)
         return r
+
+    def fiesta_data_format(self, date):
+        symbol = [',', '–']
+        try:
+            symbol_sep = [s for s in symbol if s in date]
+            if symbol_sep:
+                date_array = date.split(symbol_sep[0])
+                date_start = date_array[0].strip()
+                date_stop = date_array[-1].strip()
+            else:
+                date_start = date
+                date_stop = None
+        except:
+            date_start = None
+            date_stop = None
+        return date_start, date_stop
  
     # преодразователь даты kudago 01-03-2021 -> 1 марта 2021
     def re_format_kudago_and_kassir(self, date):
@@ -47,6 +64,16 @@ class ParserEvent:
 
         return data_start, data_stop
     
+    def parse_fiesta(self, last_post, html):
+        text_html = html.text
+        soup_html = bs(text_html, 'html.parser')
+        soup_events = soup_html.find_all('div', class_="grid_i grid_i__desktop-grid-1-3 grid_i__tablet-grid-1-2 grid_i__phone-grid-1-1")
+        
+        event = []
+        for soup_event in soup_events:
+            id_parse = soup_event.find('footer').attrs['data-calendar-item']
+
+
     def parse_kudago(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
@@ -253,6 +280,8 @@ class ParserEvent:
                 event, new_last_post = self.parse_bigleon(last_post, html)
             elif (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
                 event, new_last_post = self.parse_kassir(last_post, html)
+            elif key == 'fiesta':
+                event, new_last_post = self.parse_fiesta(last_post, html)
             # если есть новые мероприятия на сайте 
             if len(event) != 0:
                 # записываем id последнего мероприятия
