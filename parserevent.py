@@ -68,12 +68,13 @@ class ParserEvent:
         text_html = html.text
         soup_html = bs(text_html, 'html.parser')
         soup_events = soup_html.find_all('div', class_="grid_i grid_i__desktop-grid-1-3 grid_i__tablet-grid-1-2 grid_i__phone-grid-1-1")
-        
+        new_last_post = last_post
         event = []
         for soup_event in soup_events:
-            id_parse = soup_event.find('footer').attrs['data-calendar-item']
-
-
+            id_event = soup_event.find('footer').attrs['data-calendar-item']
+            if id_event == last_post:
+                break
+            
     def parse_kudago(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
@@ -202,8 +203,6 @@ class ParserEvent:
                     first_part_event = json.loads(new_json_string)
                 except:
                     continue
-            print(first_part_event)
-            print(number)
             # id события
             id_parse = first_part_event['id']
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
