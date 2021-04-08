@@ -70,10 +70,44 @@ class ParserEvent:
         soup_events = soup_html.find_all('div', class_="grid_i grid_i__desktop-grid-1-3 grid_i__tablet-grid-1-2 grid_i__phone-grid-1-1")
         new_last_post = last_post
         event = []
-        for soup_event in soup_events:
-            id_event = soup_event.find('footer').attrs['data-calendar-item']
-            if id_event == last_post:
+        for number, soup_event in enumerate(soup_events):
+            id_parse = soup_event.find('footer').attrs['data-calendar-item']
+            if id_parse == last_post:
                 break
+            if number == 0:
+                new_last_post = id_parse
+            type_event = 'Развлечения' # !!!!!!!!!!
+            img = 'https://www.fiesta.ru' + soup_event.find('img').get('src')
+            title = soup_event.find('a', class_='unit_t_a double-hover').get_text()
+            # получаем дату события
+            date = soup_event.find('p', class_='unit_date').get_text()
+            date_start, date_stop = self.fiesta_data_format(date)
+            full_link = 'https://www.fiesta.ru' + soup_event.find('a', class_='unit_t_a double-hover').get('href')
+            
+            # получение цены
+            cost_html_link = self.get_html(full_link)
+            cost_html_event = bs(cost_html_link.text, 'html.parser')
+            cost = cost_html_event.find('div', class_='article_details').find_all('dd', class_='grid_i grid_i__desktop-grid-5-6 grid_i__tablet-grid-5-6 grid_i__phone-grid-1-1')[-1].get_text().strip()
+            # если чтоимости нет -> то в cost попадает дата события, необходимо проверить ее наличие
+            if any(x in cost for x in constant.date_format_kudago):
+                cost = None 
+            
+            discounted = '0'
+            try:
+                full_address = soup_event.find('p', class_='unit_place').get_text()
+                if full_address.startswith('м.'):
+                    sep_full_address = full_address.split(',')
+                    address = ''.join(sep_full_address[1:]).strip()
+                    metro = sep_full_address[0]
+                else:
+                    address = full_address
+                    metro = None
+            except:
+                address = None
+                metro = None
+            print(number, '-', cost, sep='\n')
+            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+        return event, new_last_post
             
     def parse_kudago(self, last_post, html):
         json_html = html.json()

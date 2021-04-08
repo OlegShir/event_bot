@@ -73,7 +73,6 @@ async def scheduled(wait_for):
 				# форматирование сообщения
 				beauty = BeautyCaption(event)
 				caption_event = beauty.get_caption()
-				
 				if photo_size_height >= photo_size_width:
 					for user in subscriptions:
 						await bot.send_message(user[1], f"{fmt.hide_link(photo_url)}"+ caption_event, parse_mode=types.ParseMode.HTML)
