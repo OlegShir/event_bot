@@ -54,12 +54,11 @@ async def scheduled(wait_for):
 		await asyncio.sleep(wait_for)
 		# получаем список событий
 		new_events = parse.main_parse()
-		print(len(new_events))
 		# если мероприятия есть
 		if (new_events):
+			print(f'Всего найдено {len(new_events)} событий. Производится рассылка')
 			# для каждого мероприятия
 			for event in new_events:
-				print(len(event)) 
 				# в будущем здесь реализуется фильтр по типу мероприятия -> тип события
 				subscriptions = db.get_subscriptions()
 				# получаем ссылку на фотографию события
@@ -79,6 +78,8 @@ async def scheduled(wait_for):
 				else:
 					for user in subscriptions:
 						await bot.send_photo(user[1], file_id, caption = caption_event, parse_mode=types.ParseMode.HTML)
+				print(f'События разосланы {len(subscriptions)} пользователям')
+		print(f'\nНовых событий не найдено')
  
 
 if __name__ == '__main__':

@@ -6,6 +6,16 @@ import lxml
 import json
 import re
 
+# декоратор контроя парсинга событий
+def control_parse_events(func):
+    def wrapper(self, key, last_post, html):
+        print('\nПарсинг сайта: ', key)
+        event, new_last_post = func(self, last_post, html)
+        print(f"Найдено: {len(event)} новых событий")
+        return event, new_last_post
+    return wrapper
+
+
 class ParserEvent:
     #parse_methods = {'kudago': self.parse_kudago, 'biglion': parse_bigleon}
 
@@ -39,7 +49,9 @@ class ParserEvent:
             date_start = None
             date_stop = None
         return date_start, date_stop
- 
+    
+
+
     # преодразователь даты kudago 01-03-2021 -> 1 марта 2021
     def re_format_kudago_and_kassir(self, date):
         # обрезаем длинный формат даты события (кассир)
@@ -64,6 +76,7 @@ class ParserEvent:
 
         return data_start, data_stop
     
+    @control_parse_events
     def parse_fiesta(self, last_post, html):
         text_html = html.text
         soup_html = bs(text_html, 'html.parser')
@@ -72,7 +85,7 @@ class ParserEvent:
         event = []
         for number, soup_event in enumerate(soup_events):
             id_parse = soup_event.find('footer').attrs['data-calendar-item']
-            if id_parse == last_post:
+            if int(id_parse) == int(last_post):
                 break
             if number == 0:
                 new_last_post = id_parse
@@ -90,8 +103,7 @@ class ParserEvent:
             cost = cost_html_event.find('div', class_='article_details').find_all('dd', class_='grid_i grid_i__desktop-grid-5-6 grid_i__tablet-grid-5-6 grid_i__phone-grid-1-1')[-1].get_text().strip()
             # если чтоимости нет -> то в cost попадает дата события, необходимо проверить ее наличие
             if any(x in cost for x in constant.date_format_kudago):
-                cost = None 
-            
+                cost = None             
             discounted = '0'
             try:
                 full_address = soup_event.find('p', class_='unit_place').get_text()
@@ -105,10 +117,10 @@ class ParserEvent:
             except:
                 address = None
                 metro = None
-            print(number, '-', cost, sep='\n')
             event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
         return event, new_last_post
-            
+
+    @control_parse_events       
     def parse_kudago(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
@@ -161,6 +173,7 @@ class ParserEvent:
             event.insert(0, (id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, link))
         return event, new_last_post
 
+    @control_parse_events
     def parse_bigleon(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
@@ -206,6 +219,7 @@ class ParserEvent:
             event.append((id_parse, type_event, img, title, data_start, data_stop, cost, discounted, address, metro, full_link))
         return event, new_last_post
 
+    @control_parse_events
     def parse_kassir(self, last_post, html):
         
         # парсинг сайта KASSIR.RU осуществляется через библиотеку BeautifulSoup. Парсятся четыре веб-страницы: концерты,
@@ -265,7 +279,6 @@ class ParserEvent:
                 date_stop = None
             # категория
             type_event = first_part_event['category']
-
             # получаем вторую часть информации о событии в script: image, title, address, link 
             try:
                 second_part_event = json.loads(str(soup_event.find('script', type="application/ld+json").string))
@@ -291,8 +304,6 @@ class ParserEvent:
             full_link = second_part_event['url']
             # добавляем мероприятие в список
             event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
-            print(id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link)
-        print(event)
         return event, new_last_post
 
     def main_parse(self):
@@ -308,13 +319,13 @@ class ParserEvent:
             #func_parse = self.parse_methods.get(key)
             # получаем данные по каждому мероприятию
             if key == 'kudago':
-                event, new_last_post = self.parse_kudago(last_post, html)
+                event, new_last_post = self.parse_kudago(key, last_post, html)
             elif key == 'biglion':
-                event, new_last_post = self.parse_bigleon(last_post, html)
+                event, new_last_post = self.parse_bigleon(key, last_post, html)
             elif (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
-                event, new_last_post = self.parse_kassir(last_post, html)
+                event, new_last_post = self.parse_kassir(key, last_post, html)
             elif key == 'fiesta':
-                event, new_last_post = self.parse_fiesta(last_post, html)
+                event, new_last_post = self.parse_fiesta(key, last_post, html)
             # если есть новые мероприятия на сайте 
             if len(event) != 0:
                 # записываем id последнего мероприятия
