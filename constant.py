@@ -1,6 +1,7 @@
 import emoji
 
 API_TOKEN = '1773806846:AAGrojRK_Z5BOc00NW5gfdAb4didLqFrFLc'
+ADMIN = 435001186
 
 
 dictonary_metro = {'Пушкинская': 0, 'Технологический институт': 0, 'Балтийская': 0, 'Сенная площадь': 0, 'Технологический институт': 0,

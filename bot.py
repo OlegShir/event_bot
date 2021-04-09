@@ -8,6 +8,7 @@ import aiogram.utils.markdown as fmt
 from sqlighter import SQLighter
 from parserevent import ParserEvent
 from beauty_caption import BeautyCaption
+
 # задаем уровень логов
 logging.basicConfig(level=logging.INFO)
 
@@ -43,10 +44,17 @@ async def unsubscribe(message: types.Message):
 		db.update_subscription(message.from_user.id, False)
 		await message.answer("Вы успешно отписаны от рассылки.")
 
+# команда получения количества подписчиков - subscr
+@dp.message_handler(commands=['subscr'])
+async def get_subscr(message: types.Message):
+	# если юзер является админом
+	if message.from_user.id == constant.ADMIN:
+		count = len(db.get_subscriptions())
+		await message.answer(f'Количество активных подписчиков: {count}')
+
 @dp.message_handler()
 async def all_message(message: types.Message):
-		
-    await message.answer('Я пока еще не умею разговаривать,\nтолько выполняю команды')
+	await message.answer('Я пока еще не умею разговаривать,\nтолько выполняю команды')
 
 
 async def scheduled(wait_for):
@@ -64,7 +72,7 @@ async def scheduled(wait_for):
 				# получаем ссылку на фотографию события
 				photo_url = event[2]
 				# загружаем фотографию события на сервер Телеграмма
-				photo_info = dict(await bot.send_photo(435001186, photo_url))
+				photo_info = dict(await bot.send_photo(constant.ADMIN, photo_url))
 				# получаем id фото на сервере Телеграмма -> ссылка
 				file_id = photo_info['photo'][0]['file_id']
 				photo_size_width = photo_info['photo'][0]['width']
@@ -78,8 +86,9 @@ async def scheduled(wait_for):
 				else:
 					for user in subscriptions:
 						await bot.send_photo(user[1], file_id, caption = caption_event, parse_mode=types.ParseMode.HTML)
-				print(f'События разосланы {len(subscriptions)} пользователям')
-		print(f'\nНовых событий не найдено')
+			print(f'\nСобытия разосланы {len(subscriptions)} пользователям')
+		else:
+			print(f'\nНовых событий не найдено')
  
 
 if __name__ == '__main__':

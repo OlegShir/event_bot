@@ -15,6 +15,12 @@ def control_parse_events(func):
         return event, new_last_post
     return wrapper
 
+# get-запрос на сайты событий
+def get_html(url):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'}
+    r = requests.get(url, headers = headers)
+    return r
+
 
 class ParserEvent:
     #parse_methods = {'kudago': self.parse_kudago, 'biglion': parse_bigleon}
@@ -28,13 +34,13 @@ class ParserEvent:
                           'fiesta':          'https://www.fiesta.ru/spb/novelty/events/'\
                           
         }
+    
+    # метод выбора метода парсинга в main_parse в завизимости от ключа self.web_sites
+    def dispatch(self, key, last_post, html):
+        method = getattr(self, key)
+        return method(key, last_post, html)
 
-    def get_html(self, url):
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'}
-        r = requests.get(url, headers = headers)
-        return r
-
-    def fiesta_data_format(self, date):
+    def fiesta_date_format(self, date):
         symbol = [',', '–']
         try:
             symbol_sep = [s for s in symbol if s in date]
@@ -50,10 +56,8 @@ class ParserEvent:
             date_stop = None
         return date_start, date_stop
     
-
-
     # преодразователь даты kudago 01-03-2021 -> 1 марта 2021
-    def re_format_kudago_and_kassir(self, date):
+    def kudago_and_kassir_date_format(self, date):
         # обрезаем длинный формат даты события (кассир)
         if len(date) > 10:
             # '2021-04-28 20:00:00' -> '2021-04-28'
@@ -62,11 +66,12 @@ class ParserEvent:
         # удаление нуля в числе 
         number = int(list_date[2])
         re_format_date = str(number) + " " + constant.date_format_kudago[int(list_date[1])-1] + " " + list_date[0]
+
         return re_format_date
     
     # получаем адрес расположение мероприятия для биглиона
     def data_event(self, url):
-        html = self.get_html(url)
+        html = get_html(url)
         text_html =  html.text
         soup = bs(text_html, 'lxml')
         # производим поиск меток в html начала и окончания мероприятия
@@ -77,7 +82,7 @@ class ParserEvent:
         return data_start, data_stop
     
     @control_parse_events
-    def parse_fiesta(self, last_post, html):
+    def fiesta(self, last_post, html):
         text_html = html.text
         soup_html = bs(text_html, 'html.parser')
         soup_events = soup_html.find_all('div', class_="grid_i grid_i__desktop-grid-1-3 grid_i__tablet-grid-1-2 grid_i__phone-grid-1-1")
@@ -94,11 +99,11 @@ class ParserEvent:
             title = soup_event.find('a', class_='unit_t_a double-hover').get_text()
             # получаем дату события
             date = soup_event.find('p', class_='unit_date').get_text()
-            date_start, date_stop = self.fiesta_data_format(date)
+            date_start, date_stop = self.fiesta_date_format(date)
             full_link = 'https://www.fiesta.ru' + soup_event.find('a', class_='unit_t_a double-hover').get('href')
             
             # получение цены
-            cost_html_link = self.get_html(full_link)
+            cost_html_link = get_html(full_link)
             cost_html_event = bs(cost_html_link.text, 'html.parser')
             cost = cost_html_event.find('div', class_='article_details').find_all('dd', class_='grid_i grid_i__desktop-grid-5-6 grid_i__tablet-grid-5-6 grid_i__phone-grid-1-1')[-1].get_text().strip()
             # если чтоимости нет -> то в cost попадает дата события, необходимо проверить ее наличие
@@ -107,10 +112,12 @@ class ParserEvent:
             discounted = '0'
             try:
                 full_address = soup_event.find('p', class_='unit_place').get_text()
+                # адрес может содержать название метро
                 if full_address.startswith('м.'):
                     sep_full_address = full_address.split(',')
                     address = ''.join(sep_full_address[1:]).strip()
-                    metro = sep_full_address[0]
+                    metro_long = sep_full_address[0].split(' ')
+                    metro = ' '.join(metro_long[1:]).strip()
                 else:
                     address = full_address
                     metro = None
@@ -118,10 +125,11 @@ class ParserEvent:
                 address = None
                 metro = None
             event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+
         return event, new_last_post
 
     @control_parse_events       
-    def parse_kudago(self, last_post, html):
+    def kudago(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
         ads = json_html['results']
@@ -155,7 +163,7 @@ class ParserEvent:
             link = ad['site_url'] 
             try:
                 date_start_info = ad['dates'][0]['start_date']
-                date_start = self.re_format_kudago_and_kassir(date_start_info)
+                date_start = self.kudago_and_kassir_date_format(date_start_info)
             except:
                 date_start = None
             try:
@@ -164,17 +172,18 @@ class ParserEvent:
                     date_stop_info =  ad['dates'][0]['end_date'] 
                 else:
                     date_stop_info =  ad['dates'][count_date_length-1]['start_date']
-                date_stop = self.re_format_kudago_and_kassir(date_stop_info)
+                date_stop = self.kudago_and_kassir_date_format(date_stop_info)
             except:
                 date_stop = None
             if date_start == date_stop:
                 date_stop = None
             # добавляем мероприятие в список
             event.insert(0, (id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, link))
+
         return event, new_last_post
 
     @control_parse_events
-    def parse_bigleon(self, last_post, html):
+    def biglion(self, last_post, html):
         json_html = html.json()
         # список словарей всех мероприятий 
         ads = json_html['data']['dealOffers']
@@ -217,14 +226,15 @@ class ParserEvent:
             data_start, data_stop = self.data_event(full_link)
             # добавляем мероприятие в список
             event.append((id_parse, type_event, img, title, data_start, data_stop, cost, discounted, address, metro, full_link))
+
         return event, new_last_post
 
     @control_parse_events
-    def parse_kassir(self, last_post, html):
+    def kassir(self, last_post, html):
         
-        # парсинг сайта KASSIR.RU осуществляется через библиотеку BeautifulSoup. Парсятся четыре веб-страницы: концерты,
-        # театр, спорт и детям. Нужная информация содержится в div с классом "col-xs-2" и 'event', а также в script от  
-        # https://schema.org с аттрибутом "application/ld+json"
+        ''' парсинг сайта KASSIR.RU осуществляется через библиотеку BeautifulSoup. Парсятся четыре веб-страницы: концерты,
+            театр, спорт и детям. Нужная информация содержится в div с классом "col-xs-2" и 'event', а также в script от  
+            https://schema.org с аттрибутом "application/ld+json" '''
     
         # оставляем от запроса только текст
         text_html = html.text
@@ -271,11 +281,11 @@ class ParserEvent:
             date = first_part_event['date']
             # если дата события не один день, то она хранится в виде словаря
             if type(date) == dict:
-                date_start = self.re_format_kudago_and_kassir(first_part_event['date']['start_min'])
-                date_stop = self.re_format_kudago_and_kassir(first_part_event['date']['start_max'])
+                date_start = self.kudago_and_kassir_date_format(first_part_event['date']['start_min'])
+                date_stop = self.kudago_and_kassir_date_format(first_part_event['date']['start_max'])
             # если один день
             else:
-                date_start = self.re_format_kudago_and_kassir(date)
+                date_start = self.kudago_and_kassir_date_format(date)
                 date_stop = None
             # категория
             type_event = first_part_event['category']
@@ -304,6 +314,7 @@ class ParserEvent:
             full_link = second_part_event['url']
             # добавляем мероприятие в список
             event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+
         return event, new_last_post
 
     def main_parse(self):
@@ -314,18 +325,12 @@ class ParserEvent:
             # получаем последнее проверенное мероприятие
             last_post = db.get_last_post(key)
             # получаем данные с очередного сайта
-            html = self.get_html(value)
+            html = get_html(value)
             # определяем метод парсинга сайта
-            #func_parse = self.parse_methods.get(key)
-            # получаем данные по каждому мероприятию
-            if key == 'kudago':
-                event, new_last_post = self.parse_kudago(key, last_post, html)
-            elif key == 'biglion':
-                event, new_last_post = self.parse_bigleon(key, last_post, html)
-            elif (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
-                event, new_last_post = self.parse_kassir(key, last_post, html)
-            elif key == 'fiesta':
-                event, new_last_post = self.parse_fiesta(key, last_post, html)
+            if (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
+                event, new_last_post = self.kassir(key, last_post, html)
+            else:
+                event, new_last_post = self.dispatch(key, last_post, html)
             # если есть новые мероприятия на сайте 
             if len(event) != 0:
                 # записываем id последнего мероприятия
