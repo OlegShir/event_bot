@@ -9,9 +9,14 @@ import re
 # декоратор контроя парсинга событий
 def control_parse_events(func):
     def wrapper(self, key, last_post, html):
+        event = []
+        new_last_post = last_post
         print('\nПарсинг сайта: ', key)
-        event, new_last_post = func(self, last_post, html)
-        print(f"Найдено: {len(event)} новых событий")
+        try:
+            event, new_last_post = func(self, last_post, html, event)
+            print(f"Найдено: {len(event)} новых событий")
+        except Exception as error:
+            print(f'При парсенге {key} возникла ошибка:\n{error.__class__.__name__}: {error}')
         return event, new_last_post
     return wrapper
 
@@ -23,7 +28,6 @@ def get_html(url):
 
 
 class ParserEvent:
-    #parse_methods = {'kudago': self.parse_kudago, 'biglion': parse_bigleon}
 
     def __init__(self):
         self.web_sites = {'kudago':          'https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', \
@@ -38,6 +42,7 @@ class ParserEvent:
     # метод выбора метода парсинга в main_parse в завизимости от ключа self.web_sites
     def dispatch(self, key, last_post, html):
         method = getattr(self, key)
+
         return method(key, last_post, html)
 
     def fiesta_date_format(self, date):
@@ -54,6 +59,7 @@ class ParserEvent:
         except:
             date_start = None
             date_stop = None
+
         return date_start, date_stop
     
     # преодразователь даты kudago 01-03-2021 -> 1 марта 2021
@@ -82,12 +88,11 @@ class ParserEvent:
         return data_start, data_stop
     
     @control_parse_events
-    def fiesta(self, last_post, html):
+    def fiesta(self, last_post, html, event):
         text_html = html.text
         soup_html = bs(text_html, 'html.parser')
         soup_events = soup_html.find_all('div', class_="grid_i grid_i__desktop-grid-1-3 grid_i__tablet-grid-1-2 grid_i__phone-grid-1-1")
         new_last_post = last_post
-        event = []
         for number, soup_event in enumerate(soup_events):
             id_parse = soup_event.find('footer').attrs['data-calendar-item']
             if int(id_parse) == int(last_post):
@@ -129,13 +134,12 @@ class ParserEvent:
         return event, new_last_post
 
     @control_parse_events       
-    def kudago(self, last_post, html):
+    def kudago(self, last_post, html, event):
         json_html = html.json()
         # список словарей всех мероприятий 
         ads = json_html['results']
         # сохраняем id первого мероприятия в полученном списке
         new_last_post = ads[0]['id']
-        event = []
         for ad in ads:
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
             if ad['id'] == last_post:
@@ -183,14 +187,13 @@ class ParserEvent:
         return event, new_last_post
 
     @control_parse_events
-    def biglion(self, last_post, html):
+    def biglion(self, last_post, html, event):
         json_html = html.json()
         # список словарей всех мероприятий 
         ads = json_html['data']['dealOffers']
         # сохраняем id первого мероприятия в полученном списке
         new_last_post = ads[0]['id']
         # создаем пустой список для дальшейшего добавления в него мероприятий
-        event = []
         for ad in ads:
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
             if ad['id'] == last_post:
@@ -230,7 +233,7 @@ class ParserEvent:
         return event, new_last_post
 
     @control_parse_events
-    def kassir(self, last_post, html):
+    def kassir(self, last_post, html, event):
         
         ''' парсинг сайта KASSIR.RU осуществляется через библиотеку BeautifulSoup. Парсятся четыре веб-страницы: концерты,
             театр, спорт и детям. Нужная информация содержится в div с классом "col-xs-2" и 'event', а также в script от  
@@ -245,7 +248,6 @@ class ParserEvent:
         # сохраняем id первого мероприятия в полученном списке
         # создаем пустой список для дальшейшего добавления в него мероприятий
         new_last_post = last_post
-        event = []
         # обрабатываем каждое событие с второго - нулевого нет, первое - реклама
         for number, soup_event in enumerate(soup_events[2:22]):
             # получаем первую часть информации о событии: id, цена, дата, тип 
