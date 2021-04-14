@@ -62,7 +62,7 @@ async def scheduled(wait_for):
 		await asyncio.sleep(wait_for)
 		# получаем список событий
 		new_events = parse.main_parse()
-		# если мероприятия есть
+		# если мероприятия есть  	
 		if (new_events):
 			print(f'Всего найдено {len(new_events)} событий. Производится рассылка')
 			# для каждого мероприятия

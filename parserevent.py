@@ -1,5 +1,5 @@
 import requests
-import constant
+import constant, format
 from sqlighter import SQLighter
 from bs4 import BeautifulSoup as bs
 import lxml
@@ -15,17 +15,20 @@ def control_parse_events(func):
         try:
             event, new_last_post = func(self, last_post, html, event)
             print(f"Найдено: {len(event)} новых событий")
+
         except Exception as error:
             print(f'При парсенге {key} возникла ошибка:\n{error.__class__.__name__}: {error}')
+
         return event, new_last_post
+
     return wrapper
 
-# get-запрос на сайты событий
+# get-запрос на сайты 
 def get_html(url):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'}
     r = requests.get(url, headers = headers)
-    return r
 
+    return r
 
 class ParserEvent:
 
@@ -35,51 +38,21 @@ class ParserEvent:
                           'kassir_koncert':  'https://spb.kassir.ru/bilety-na-koncert?sort=1', \
                           'kassir_teatr' :   'https://spb.kassir.ru/bilety-v-teatr?sort=1', \
                           'kassir_detyam':   'https://spb.kassir.ru/detskaya-afisha?sort=1',
-                          'fiesta':          'https://www.fiesta.ru/spb/novelty/events/'\
+                          'fiesta':          'https://www.fiesta.ru/spb/novelty/events/',
+                          'kuda_spb':        'https://kuda-spb.ru/event/'\
                           
         }
-    
-    # метод выбора метода парсинга в main_parse в завизимости от ключа self.web_sites
+    # выбор метода парсинга в main_parse в завизимости от ключа self.web_sites
     def dispatch(self, key, last_post, html):
         method = getattr(self, key)
 
         return method(key, last_post, html)
-
-    def fiesta_date_format(self, date):
-        symbol = [',', '–']
-        try:
-            symbol_sep = [s for s in symbol if s in date]
-            if symbol_sep:
-                date_array = date.split(symbol_sep[0])
-                date_start = date_array[0].strip()
-                date_stop = date_array[-1].strip()
-            else:
-                date_start = date
-                date_stop = None
-        except:
-            date_start = None
-            date_stop = None
-
-        return date_start, date_stop
-    
-    # преодразователь даты kudago 01-03-2021 -> 1 марта 2021
-    def kudago_and_kassir_date_format(self, date):
-        # обрезаем длинный формат даты события (кассир)
-        if len(date) > 10:
-            # '2021-04-28 20:00:00' -> '2021-04-28'
-            date =  date[0:10]
-        list_date = date.split('-')
-        # удаление нуля в числе 
-        number = int(list_date[2])
-        re_format_date = str(number) + " " + constant.date_format_kudago[int(list_date[1])-1] + " " + list_date[0]
-
-        return re_format_date
+   
     
     # получаем адрес расположение мероприятия для биглиона
     def data_event(self, url):
         html = get_html(url)
-        text_html =  html.text
-        soup = bs(text_html, 'lxml')
+        soup = bs(html.text, 'lxml')
         # производим поиск меток в html начала и окончания мероприятия
         info_data = soup.find_all('p', class_='info__text')
         data_start = info_data[0].get_text()
@@ -88,9 +61,54 @@ class ParserEvent:
         return data_start, data_stop
     
     @control_parse_events
+    def kuda_spb(self, last_post, html, event):
+        soup_html = bs(html.text, 'html.parser')
+        # на сайте события хранятся в классе "events_list", но он разделен рекламой. Поэтому надо найти все эти классы
+        soup_divide = soup_html.find_all('div', class_="events_list")
+        # затем объединить
+        soup_events = []
+        for divide in soup_divide:
+            soup_events.extend(divide.find_all('div', class_ = 'event'))
+        new_last_post = last_post
+        
+        for number, soup_event in enumerate(soup_events):
+            type_event_unformat = soup_event.find('div', class_= 'event_type').text.strip()
+            try:
+                type_event = constant.dictonary_event_kuda_spb[type_event_unformat]
+            except:
+                print(type_event_unformat)
+                type_event = 'Разное'
+            img = soup_event.find('img').get('src')
+            title = soup_event.find('a', itemprop="url").get('title')
+            date_start = format.kudago_and_kassir_date_format(soup_event.find('span', itemprop='startDate').text.strip())
+            date_stop = format.kudago_and_kassir_date_format(soup_event.find('span', itemprop='endDate').text.strip())
+            if date_start == date_stop:
+                date_stop = None
+            cost_data = soup_event.find('span', itemprop= 'price').text.strip()
+            if int(cost_data) == 0:
+                cost = 'Бесплатно'
+            else:
+                cost = f'от {cost_data} рублей'
+            discounted = '0'
+            name_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'name').text.strip())
+            address_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'address').text.strip())
+            address = format.connect_full_address(name_place, address_place)
+            metro = None
+            full_link = soup_event.find('a', itemprop='url').get('href')
+            # на сайте kuda_spb отсутствует id события -> вычисляем его по длине других значений
+            id_parse = 2 * len(title) - len(img)
+            if int(id_parse) == int(last_post):
+                break
+            if number == 0:
+                new_last_post = id_parse
+            
+            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+
+        return event, new_last_post
+
+    @control_parse_events
     def fiesta(self, last_post, html, event):
-        text_html = html.text
-        soup_html = bs(text_html, 'html.parser')
+        soup_html = bs(html.text, 'html.parser')
         soup_events = soup_html.find_all('div', class_="grid_i grid_i__desktop-grid-1-3 grid_i__tablet-grid-1-2 grid_i__phone-grid-1-1")
         new_last_post = last_post
         for number, soup_event in enumerate(soup_events):
@@ -104,7 +122,7 @@ class ParserEvent:
             title = soup_event.find('a', class_='unit_t_a double-hover').get_text()
             # получаем дату события
             date = soup_event.find('p', class_='unit_date').get_text()
-            date_start, date_stop = self.fiesta_date_format(date)
+            date_start, date_stop = format.fiesta_date_format(date)
             full_link = 'https://www.fiesta.ru' + soup_event.find('a', class_='unit_t_a double-hover').get('href')
             
             # получение цены
@@ -167,7 +185,7 @@ class ParserEvent:
             link = ad['site_url'] 
             try:
                 date_start_info = ad['dates'][0]['start_date']
-                date_start = self.kudago_and_kassir_date_format(date_start_info)
+                date_start = format.kudago_and_kassir_date_format(date_start_info)
             except:
                 date_start = None
             try:
@@ -176,7 +194,7 @@ class ParserEvent:
                     date_stop_info =  ad['dates'][0]['end_date'] 
                 else:
                     date_stop_info =  ad['dates'][count_date_length-1]['start_date']
-                date_stop = self.kudago_and_kassir_date_format(date_stop_info)
+                date_stop = format.kudago_and_kassir_date_format(date_stop_info)
             except:
                 date_stop = None
             if date_start == date_stop:
@@ -276,18 +294,18 @@ class ParserEvent:
             max_cost = first_part_event['maxPrice']
             # формируем строку стоимости
             if min_cost == max_cost:
-                cost = str(max_cost) + ' рублей'
+                cost = f'{str(max_cost)} рублей'
             else:
-                cost = 'от ' + str(min_cost) + ' до ' + str(max_cost) + ' рублей'
+                cost = f'от {str(min_cost)} до {str(max_cost)} рублей'
             # дата события
             date = first_part_event['date']
             # если дата события не один день, то она хранится в виде словаря
             if type(date) == dict:
-                date_start = self.kudago_and_kassir_date_format(first_part_event['date']['start_min'])
-                date_stop = self.kudago_and_kassir_date_format(first_part_event['date']['start_max'])
+                date_start = format.kudago_and_kassir_date_format(first_part_event['date']['start_min'])
+                date_stop = format.kudago_and_kassir_date_format(first_part_event['date']['start_max'])
             # если один день
             else:
-                date_start = self.kudago_and_kassir_date_format(date)
+                date_start = format.kudago_and_kassir_date_format(date)
                 date_stop = None
             # категория
             type_event = first_part_event['category']
@@ -301,15 +319,10 @@ class ParserEvent:
             # название события
             title = second_part_event['name']
             discounted = 0
-            # адрес проведения события
-            address_place = second_part_event['location']['address']
-            # проверяем наличие годода Санк-Петербург в адресе
-            if address_place.startswith('Санкт'):
-                # если есть убираем
-                address_spb = address_place.split(', ')
-                address_place = ', '.join(address_spb[1:])
+            # адрес проведения события b наличие годода Санк-Петербур
+            address_place = format.delete_SPB(second_part_event['location']['address']) 
             # добавляем перед адресом название места проведения события
-            address = second_part_event['location']['name'] + ", " + address_place
+            address = f"{second_part_event['location']['name']}, {address_place}"
             # МЕТРО В РАЗРАБОТКЕ
             metro = None
             # ссылка на событие
