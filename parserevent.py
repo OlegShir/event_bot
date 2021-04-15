@@ -88,8 +88,7 @@ class ParserEvent:
             if int(cost_data) == 0:
                 cost = 'Бесплатно'
             else:
-                cost = f'от {cost_data} рублей'
-            discounted = '0'
+                cost = f'от {cost_data} рублей'            
             name_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'name').text.strip())
             address_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'address').text.strip())
             address = format.connect_full_address(name_place, address_place)
@@ -102,7 +101,7 @@ class ParserEvent:
             if number == 0:
                 new_last_post = id_parse
             
-            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, address, metro, full_link))
 
         return event, new_last_post
 
@@ -132,7 +131,6 @@ class ParserEvent:
             # если чтоимости нет -> то в cost попадает дата события, необходимо проверить ее наличие
             if any(x in cost for x in constant.date_format_kudago):
                 cost = None             
-            discounted = '0'
             try:
                 full_address = soup_event.find('p', class_='unit_place').get_text()
                 # адрес может содержать название метро
@@ -147,7 +145,7 @@ class ParserEvent:
             except:
                 address = None
                 metro = None
-            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, address, metro, full_link))
 
         return event, new_last_post
 
@@ -165,23 +163,22 @@ class ParserEvent:
             # производим получение данных из json для БД
             id_parse  = ad['id']
             type_event_kudago = ad['categories'][0]
-            try:
-                type_event = constant.dictonary_event_kudago[type_event_kudago]
-            except:
-                type_event = "Разное"
+            type_event = constant.dictonary_event_kudago.get(type_event_kudago, 'Разное')
             img = ad['images'][0]['thumbnails']['640x384']
             title = ad['title']
-            cost = ad['price']
-            discounted = 0
-            try:
-                address = ad['place']['address'] 
-            except:
+            cost = ad.get('price', None)
+            place = ad.get('place', None)
+            if place:
+                address_place = place.get('address', None)
+                name_place = place.get('title', None)
+                address = format.connect_full_address(name_place, address_place)
+                metro = place.get('subway', None)
+                if metro:
+                    metro = metro.split(', ')[0]
+            else:
                 address = None
-            try:
-                metro_list = ad['place']['subway'] 
-                metro = metro_list.split(', ')[0]
-            except:
                 metro = None
+
             link = ad['site_url'] 
             try:
                 date_start_info = ad['dates'][0]['start_date']
@@ -200,7 +197,7 @@ class ParserEvent:
             if date_start == date_stop:
                 date_stop = None
             # добавляем мероприятие в список
-            event.insert(0, (id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, link))
+            event.insert(0, (id_parse, type_event, img, title, date_start, date_stop, cost, address, metro, link))
 
         return event, new_last_post
 
@@ -212,7 +209,7 @@ class ParserEvent:
         # сохраняем id первого мероприятия в полученном списке
         new_last_post = ads[0]['id']
         # создаем пустой список для дальшейшего добавления в него мероприятий
-        for ad in ads:
+        for ad in ads[0:5]:
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
             if ad['id'] == last_post:
                 break
@@ -222,14 +219,12 @@ class ParserEvent:
                 continue
             id_parse  = ad['id']
             type_event_biglion = ad['categoryTitle']
-            try:
-                type_event = constant.dictonary_event_biglion[type_event_biglion]
-            except:
-                type_event = "Разное"
+            type_event = constant.dictonary_event_kudago.get(type_event_biglion, 'Разное')
             img = ad['image']
             title = ad['title']
-            cost = str(ad['price']) + ' ' + 'рублей'
-            discounted = ad['priceDiscounted']
+            priceDiscounted = ad['priceDiscounted']
+            price = ad['price']
+            cost = f'<s>{price}</s> {priceDiscounted} рублей'
             metro = ad['locations'][0]['metro'] 
             # если в названии метро есть скобки в которых указывается цвек линнии - убираем
             try:
@@ -246,7 +241,7 @@ class ParserEvent:
             full_link = 'https://speterburg.biglion.ru/deals/' + link 
             data_start, data_stop = self.data_event(full_link)
             # добавляем мероприятие в список
-            event.append((id_parse, type_event, img, title, data_start, data_stop, cost, discounted, address, metro, full_link))
+            event.append((id_parse, type_event, img, title, data_start, data_stop, cost, address, metro, full_link))
 
         return event, new_last_post
 
@@ -318,7 +313,6 @@ class ParserEvent:
             img = second_part_event['image']
             # название события
             title = second_part_event['name']
-            discounted = 0
             # адрес проведения события b наличие годода Санк-Петербур
             address_place = format.delete_SPB(second_part_event['location']['address']) 
             # добавляем перед адресом название места проведения события
@@ -328,7 +322,7 @@ class ParserEvent:
             # ссылка на событие
             full_link = second_part_event['url']
             # добавляем мероприятие в список
-            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, discounted, address, metro, full_link))
+            event.append((id_parse, type_event, img, title, date_start, date_stop, cost, address, metro, full_link))
 
         return event, new_last_post
 

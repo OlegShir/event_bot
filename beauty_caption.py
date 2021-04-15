@@ -1,14 +1,5 @@
-###########################################
-###########################################
-###########################################
-###########################################
-###########################################
-###########################################
-###########################################
-###########################################
-###########################################
-#(  0         1               2               3            4              5         6     7       8      9      10)
-#(номер, тип события, ссылка на картинку, заголовок, дата начала, дата оканчания, цена, скидка, адрес, метро, ссылка) 
+#(  0         1               2               3            4              5         6     7      8     9)
+#(номер, тип события, ссылка на картинку, заголовок, дата начала, дата оканчания, цена, адрес, метро, ссылка) 
 
 import constant
 
@@ -19,46 +10,39 @@ class BeautyCaption:
         self.caption = ''
     
     def get_caption(self):
-        # значек мероприятия
+        # выбор значка эмодзи для события
         icon_event = constant.dictonary_icon_event[self.event[1]]
-        # заголовок
-        title = self.event[3][0].upper() + self.event[3][1:] 
-        # время проведения 
-        # если даты окончания нет -> один день
-        if self.event[5] == None:
-            date = self.event[4] 
-        else:
-            array = ['с', self.event[4], 'по', self.event[5]]
-            date = ' '.join(array)
-        # если отсутствует стоимость
-        if (self.event[6] == '') | (self.event[6] == None):
-            price = 'подродности в описании'
-        else:
-            price = self.event[6]
-        # если отсутствует адрес
-        if self.event[8] == None:
-            address = ''
-        else:
-            address = constant.address + ' ' + self.event[8] + '\n' 
-        # если отсутствует метро
-        if (self.event[9] == '') | (self.event[9] == None):
-            metro = ''
-        else:
-            metro = constant.metro + ' ' + self.event[9] + '\n'
-        link =  constant.link + self.event[10]
         
-        caption = icon_event + ' ' + title + '\n\n' + \
-				  constant.data + ' ' + date + '\n' + \
-				  constant.price + ' ' + price + '\n' + \
-				  address + \
-				  metro + \
-				  link
+        # установка названия события с большой буквы
+        title = self.event[3][0].upper() + self.event[3][1:] 
+        
+        # форматирования даты события: если есть конец -> то 'с ... по ...', иначе только начало, либо ''
+        if self.event[4] and self.event[5]:
+            date = f'{constant.data} с {self.event[4]} по {self.event[5]}\n' 
+        elif self.event[4] and not self.event[5]:
+            date = f'{constant.data} {self.event[4]}\n' 
+        else:
+            date = ''
+        
+        # форматирование стоимости события: если она отсутствует -> 'подродности в описании'
+        price = self.event[6] if self.event[6] else 'подродности в описании'
+        
+        # если отсутствует адрес
+        address = f'{constant.address} {self.event[7]} <a>https://maps.google.com/?q={self.event[7]}</a>\n' if self.event[7] else ''
+
+        # если отсутствует метро
+        metro = f'{constant.metro} {self.event[8]}\n' if self.event[8] else ''
+                
+        link =  f'{constant.link} {self.event[9]}'
+        
+        caption = f'{icon_event} {title}\n\n{date}{constant.price} {price}\n{address}{metro}{link}'
 
         return caption
 
-        '''
+#
+'''
 if __name__ == '__main__':
-    event = (191321, 'Детям', 'https://kudago.com/media/thumbs/640x384/images/event/cb/f8/cbf8e4ea908f15a154a84f9f854b90b4.jpg', 'Всероссийская историческая интеллектуальная онлайн-игра', '17 марта 2021', None, '', 0, None, None, 'https://kudago.com/online/event/detyam-vserossijskaya-istoricheskaya-intellektualnaya-onlajn-igra/')
-    bc = Beauty_caption(event)
+    event = (191648, 'Отдых', 'https://kudago.com/media/thumbs/640x384/images/event/5d/6f/5d6fe7d5640cd4a513c4d108c3dfb4fe.jpg', 'забеги Parkrun', None, None, '', 0, None, None, 'https://kudago.com/spb/event/recreation-zabegi-parkrun/')
+    bc = BeautyCaption(event)
     caption = bc.get_caption()
     print(caption)'''

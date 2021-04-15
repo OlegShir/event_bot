@@ -64,7 +64,7 @@ async def scheduled(wait_for):
 		new_events = parse.main_parse()
 		# если мероприятия есть  	
 		if (new_events):
-			print(f'Всего найдено {len(new_events)} событий. Производится рассылка')
+			print(f'Всего найдено {len(new_events)} новых событий. Производится рассылка ...')
 			# для каждого мероприятия
 			for event in new_events:
 				# в будущем здесь реализуется фильтр по типу мероприятия -> тип события

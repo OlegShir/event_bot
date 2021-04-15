@@ -22,7 +22,7 @@ class SQLighter:
     def write_events(self, events):
         """Записываем список мероприятий в БД"""
         with self.connection:
-            return self.cursor.executemany("INSERT INTO event(id_parse, type, img, title, data_start, data_stop, cost, discounted, address, metro,  link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", events)
+            return self.cursor.executemany("INSERT INTO event(id_parse, type, img, title, data_start, data_stop, cost, address, metro,  link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", events)
 
     def subscriber_exists(self, user_id):
         """Проверяем, есть ли уже пользователь в базе"""
