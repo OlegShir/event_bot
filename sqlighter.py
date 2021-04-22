@@ -31,10 +31,10 @@ class SQLighter:
             print(result)
             return bool(len(result))
 
-    def add_subscriber(self, user_id, status = True):
+    def add_subscriber(self, user_id, user_name, status = True):
         """Добавляем нового подписчика"""
         with self.connection:
-            return self.cursor.execute("INSERT INTO user(user_id, status) VALUES(?,?)", (user_id, status))
+            return self.cursor.execute("INSERT INTO user(user_id, user_name, status) VALUES(?, ?, ?)", (user_id, user_name, status))
 
     def update_subscription(self, user_id, status):
         """Обновляем статус подписки пользователя"""

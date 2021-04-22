@@ -14,7 +14,7 @@ class BeautyCaption:
         icon_event = constant.dictonary_icon_event[self.event[1]]
         
         # установка названия события с большой буквы
-        title = self.event[3][0].upper() + self.event[3][1:] 
+        title = self.event[3][0].upper() + self.event[3][1:]
         
         # форматирования даты события: если есть конец -> то 'с ... по ...', иначе только начало, либо ''
         if self.event[4] and self.event[5]:
@@ -28,7 +28,7 @@ class BeautyCaption:
         price = self.event[6] if self.event[6] else 'подродности в описании'
         
         # если отсутствует адрес
-        address = f'{constant.address} {self.event[7]} <a>https://maps.google.com/?q={self.event[7]}</a>\n' if self.event[7] else ''
+        address = f'{constant.address} <a href=\"https://maps.google.com/?q={self.event[7]}\">{self.event[7]}</a>\n' if self.event[7] else ''
 
         # если отсутствует метро
         metro = f'{constant.metro} {self.event[8]}\n' if self.event[8] else ''

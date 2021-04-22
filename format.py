@@ -65,22 +65,68 @@ def fiesta_date_format(date):
 print(fiesta_date_format(date))'''
 
 #_______________________________________________________
-# метод форматирования даты события сайта kudago, kassir, kuda spb:
+# метод форматирования даты события сайта kudago, kassir, kuda spb, peterburg_center:
 #
 # 2021-03-01          -> 1 марта 2021
 # 2021-03-01 19:00:00 -> 1 марта 2021
-def kudago_and_kassir_date_format(date):
+# 18.04.2021          -> 18 апреля 2021
+def date_format(date, type_sep):
+    
     # обрезаем длинный формат даты события (кассир)
     if len(date) > 10:
         # '2021-04-28 20:00:00' -> '2021-04-28'
         date =  date[0:10]
-    list_date = date.split('-')
-    # удаление нуля в числе 
-    number = int(list_date[2])
-    formated_date = f'{str(number)} {constant.date_format_kudago[int(list_date[1])-1]} {list_date[0]}'
-
+    list_date = date.split(type_sep)
+    month = int(list_date[1])-1
+    # для КудаGo и Кассира разделение '-'
+    if type_sep == '-':
+            # удаление нуля в числе 
+        day = int(list_date[2])
+        year = list_date[0]
+    # для Петербург Центра разделение '.'
+    elif type_sep == '.':
+        day = int(list_date[0])
+        year = list_date[2]
+        
+    formated_date = f'{str(day)} {constant.list_month[month]} {year}'
+        
     return formated_date
 
+'''
 # ТЕСТ
-'''date = '2021-04-28 20:00:00'
-print(kudago_and_kassir_date_format(date))'''
+date = '2021-04-28 20:00:00'
+print(date_format(date, '-'))
+
+date2 = '18.04.2021'
+print(date_format(date2, '.'))
+'''
+
+#_______________________________________________________
+# метод разделения адреса события на сайте kassir
+#
+# 'БКЗ Октябрьский, Лиговский пр., д.6. ст.м. "Пл. Восстания"' -> 'БКЗ Октябрьский, Лиговский пр., д.6.', 'Пл. Восстания'
+def sep_address_metro(address):
+    # убираем html тэг &quot; из строки адреса
+    address = address.replace('&quot;', '')
+    metro = None
+    result = re.search(r'м\.|метро|ст\.\s*метро|ст\.\s*м\.|ст\.\s*м', address, flags = re.IGNORECASE)
+    if result:
+        start_symbol = result.span()[0]
+        end_symbol = result.span()[1]
+   
+        metro = address[end_symbol:].replace('\"', '').strip()
+        if metro.find('.'):
+            try:
+                metro = metro.split('.')
+                # ищем совпадение в списке станций
+                metro = [x for x in constant.list_metro if re.findall(metro[-1].strip() , x)][0]
+            except:
+                metro = None
+
+        address = address[0:start_symbol].strip()
+      
+    return address, metro
+
+# ТЕСТ
+'''address = 'БКЗ Октябрьский, Лиговский пр., д.6. ст.м. "Пл. Восстания"'
+print(sep_address_metro(address))'''
