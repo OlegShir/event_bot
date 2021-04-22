@@ -25,7 +25,7 @@ dp = Dispatcher(bot)
 async def subscribe(message: types.Message):
 	if(not db.subscriber_exists(message.from_user.id)):
 		# если юзера нет в базе, добавляем его
-		db.add_subscriber(message.from_user.id)
+		db.add_subscriber(message.from_user.id, message.from_user.first_name)
 	else:
 		# если он уже есть, то просто обновляем ему статус подписки
 		db.update_subscription(message.from_user.id, True)
@@ -54,7 +54,8 @@ async def get_subscr(message: types.Message):
 
 @dp.message_handler()
 async def all_message(message: types.Message):
-	await message.answer('Я пока еще не умею разговаривать,\nтолько выполняю команды')
+	name_user = message.from_user.first_name
+	await message.answer(f'{name_user}, я пока еще не умею разговаривать,\nтолько выполняю команды')
 
 
 async def scheduled(wait_for):
@@ -67,25 +68,30 @@ async def scheduled(wait_for):
 			print(f'Всего найдено {len(new_events)} новых событий. Производится рассылка ...')
 			# для каждого мероприятия
 			for event in new_events:
-				# в будущем здесь реализуется фильтр по типу мероприятия -> тип события
-				subscriptions = db.get_subscriptions()
-				# получаем ссылку на фотографию события
-				photo_url = event[2]
-				# загружаем фотографию события на сервер Телеграмма
-				photo_info = dict(await bot.send_photo(constant.ADMIN, photo_url))
-				# получаем id фото на сервере Телеграмма -> ссылка
-				file_id = photo_info['photo'][0]['file_id']
-				photo_size_width = photo_info['photo'][0]['width']
-				photo_size_height = photo_info['photo'][0]['height']
-				# форматирование сообщения
-				beauty = BeautyCaption(event)
-				caption_event = beauty.get_caption()
-				if photo_size_height >= photo_size_width:
-					for user in subscriptions:
-						await bot.send_message(user[1], f"{fmt.hide_link(photo_url)}"+ caption_event, parse_mode=types.ParseMode.HTML)
-				else:
-					for user in subscriptions:
-						await bot.send_photo(user[1], file_id, caption = caption_event, parse_mode=types.ParseMode.HTML)
+				try:
+					# в будущем здесь реализуется фильтр по типу мероприятия -> тип события
+					subscriptions = db.get_subscriptions()
+					# получаем ссылку на фотографию события
+					photo_url = event[2]
+					# загружаем фотографию события на сервер Телеграмма
+					photo_info = dict(await bot.send_photo(constant.ADMIN, photo_url))
+					# получаем id фото на сервере Телеграмма -> ссылка
+					file_id = photo_info['photo'][0]['file_id']
+					photo_size_width = photo_info['photo'][0]['width']
+					photo_size_height = photo_info['photo'][0]['height']
+					# форматирование сообщения
+					beauty = BeautyCaption(event)
+					caption_event = beauty.get_caption()
+					if photo_size_height >= photo_size_width:
+						for user in subscriptions:
+							await bot.send_message(user[1], f"{fmt.hide_link(photo_url)}{caption_event}", parse_mode=types.ParseMode.HTML)
+					else:
+						for user in subscriptions:
+							await bot.send_photo(user[1], file_id, caption = f"{caption_event}", parse_mode=types.ParseMode.HTML)
+				except Exception as error:
+					print(f'При рассылке возникла ошибка:\n{error.__class__.__name__}: {error}\nСобытие содержало:\n{event}\nОписание:\n{caption_event}\n')
+					continue
+					
 			print(f'\nСобытия разосланы {len(subscriptions)} пользователям')
 		else:
 			print(f'\nНовых событий не найдено')
@@ -96,3 +102,7 @@ if __name__ == '__main__':
 	loop.create_task(scheduled(5))
 	executor.start_polling(dp, skip_updates=True)
 	
+'''в куда го экранировать ""
+в кассир бобавить метро и пробелы в адрес
+куда спб метро
+пет центр экранирова ""'''
