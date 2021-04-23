@@ -5,7 +5,7 @@
     Гугл - 200$/месяц)'''
 
 import requests, json, constant
-
+'''
 def control_class_geocoderMetro(func):
     def wrapper(self, address):
         try:
@@ -17,21 +17,27 @@ def control_class_geocoderMetro(func):
         return metro
     
     return wrapper
-
+'''
 def get_json(url):
-    r = requests.get(url)
+    headers = {'X-Auth-Key': '5c1a9786-84a9-4f2e-80d1-d66945f9bc2e'}
+    r = requests.get(url, headers = headers)
     
     return r.json()
+
 
 class geocoderMetro:
 
     def __init__(self):
+        self.dev_cabinet = 'https://api-developer.tech.yandex.net/projects/4f3f4985-5169-4ce6-bb83-dc8fbcc5a205/services/apimaps'
         self.base_google = f'https://maps.googleapis.com/maps/api/geocode/json?language=ru&key={constant.API_GOOGLE}&address=Санкт-Петербург,'
         self.base_yandex = f'https://geocode-maps.yandex.ru/1.x/?kind=metro&results=1&format=json&apikey={constant.API_YANDEX}&geocode='
 
-    @control_class_geocoderMetro
     def get_metro(self, address):
-        if address:
+        metro = None
+        # контролим лимит Яндекса
+        limit_json = get_json(self.dev_cabinet)
+        limit = limit_json['limits']['apimaps_http_geocoder_daily']['value']
+        if address and limit < 1000:
             # форматируем адрес под Гугл
             google_address = address.replace(' ', '%20')
             # создаем строку запроса для Гугл
@@ -51,8 +57,9 @@ class geocoderMetro:
 
             metro = metro_full.replace('метро ', '')
         
-        else: metro = None
-
+        else: 
+            print('Ошибка: кончился лимит запросов на Яндексе или нет адреса')
+         
         return metro 
 
 
@@ -61,4 +68,5 @@ class geocoderMetro:
 address = 'Колпино'
 bs = geocoderMetro()
 merto = bs.get_metro(address)
-print((merto))'''
+print((merto))
+'''

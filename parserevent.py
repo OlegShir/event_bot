@@ -45,13 +45,13 @@ def get_info(url, type_parse):
 class ParserEvent:
     # начальные свойства сайтов событий 'название метода парсинга: [адрес парсинга, тип парсинга]'
     def __init__(self):
-        self.web_sites = {#'kudago':          ['https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', 'json'], \
-                          #'biglion':         ['https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', 'json'], \
-                          #'kassir_koncert':  ['https://spb.kassir.ru/bilety-na-koncert?sort=1', 'bs4'], \
-                          #'kassir_teatr' :   ['https://spb.kassir.ru/bilety-v-teatr?sort=1' , 'bs4'], \
-                          #'kassir_detyam':   ['https://spb.kassir.ru/detskaya-afisha?sort=1', 'bs4'],
-                          #'fiesta':          ['https://www.fiesta.ru/spb/novelty/events/', 'bs4'],
-                          #'kuda_spb':        ['https://kuda-spb.ru/event/', 'bs4'],
+        self.web_sites = {'kudago':          ['https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', 'json'], \
+                          'biglion':         ['https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', 'json'], \
+                          'kassir_koncert':  ['https://spb.kassir.ru/bilety-na-koncert?sort=1', 'bs4'], \
+                          'kassir_teatr' :   ['https://spb.kassir.ru/bilety-v-teatr?sort=1' , 'bs4'], \
+                          'kassir_detyam':   ['https://spb.kassir.ru/detskaya-afisha?sort=1', 'bs4'],
+                          'fiesta':          ['https://www.fiesta.ru/spb/novelty/events/', 'bs4'],
+                          'kuda_spb':        ['https://kuda-spb.ru/event/', 'bs4'],
                           'peterburg_center':['https://peterburg.center/events-next', 'bs4']\
                           
         }
