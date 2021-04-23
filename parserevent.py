@@ -2,7 +2,6 @@ import requests
 import constant, format
 from sqlighter import SQLighter
 from bs4 import BeautifulSoup as bs
-import lxml
 import json
 import re
 
@@ -25,6 +24,10 @@ def control_parse_events(func):
 
 # get-запрос на сайты 
 def get_info(url, type_parse):
+    '''в зависимости от типа парсинга определяется его метод type_parse:
+       - BeautifulSoup при поиске на страницах событий;
+       - json при взаимодействии с API'''
+
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'}
     r = requests.get(url, headers = headers)
     r.encoding = 'utf-8'
@@ -34,20 +37,21 @@ def get_info(url, type_parse):
         info = bs(r.text, 'html.parser')
         
     elif type_parse == 'json':
+        # преобразуем в словарь
         info = r.json()
 
     return info
 
 class ParserEvent:
-
+    # начальные свойства сайтов событий 'название метода парсинга: [адрес парсинга, тип парсинга]'
     def __init__(self):
-        self.web_sites = {'kudago':          ['https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', 'json'], \
-                          'biglion':         ['https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', 'json'], \
-                          'kassir_koncert':  ['https://spb.kassir.ru/bilety-na-koncert?sort=1', 'bs4'], \
-                          'kassir_teatr' :   ['https://spb.kassir.ru/bilety-v-teatr?sort=1' , 'bs4'], \
-                          'kassir_detyam':   ['https://spb.kassir.ru/detskaya-afisha?sort=1', 'bs4'],
-                          'fiesta':          ['https://www.fiesta.ru/spb/novelty/events/', 'bs4'],
-                          'kuda_spb':        ['https://kuda-spb.ru/event/', 'bs4'],
+        self.web_sites = {#'kudago':          ['https://kudago.com/public-api/v1.4/events/?page_size=100&order_by=-publication_date&location=spb&expand=price,place,images,categories,dates,site_url&fields=id,title,price,place,images,dates,categories,site_url', 'json'], \
+                          #'biglion':         ['https://speterburg.biglion.ru/api/v4/search/getSearchResults/?show_free=1&city=c_18&category=131&page=1&per_page=60&sort_type=start_date&sort_direction=desc', 'json'], \
+                          #'kassir_koncert':  ['https://spb.kassir.ru/bilety-na-koncert?sort=1', 'bs4'], \
+                          #'kassir_teatr' :   ['https://spb.kassir.ru/bilety-v-teatr?sort=1' , 'bs4'], \
+                          #'kassir_detyam':   ['https://spb.kassir.ru/detskaya-afisha?sort=1', 'bs4'],
+                          #'fiesta':          ['https://www.fiesta.ru/spb/novelty/events/', 'bs4'],
+                          #'kuda_spb':        ['https://kuda-spb.ru/event/', 'bs4'],
                           'peterburg_center':['https://peterburg.center/events-next', 'bs4']\
                           
         }
@@ -74,7 +78,7 @@ class ParserEvent:
         # получаем список div-ов, содержащих ссылки на страницы событий
         soup_hrefs = info.find('div', class_ = 'views-responsive-grid').find_all('div', class_ = 'card_bottom_right')
         new_last_post = last_post
-        for number, soup_href in enumerate(soup_hrefs):
+        for number, soup_href in enumerate(soup_hrefs[1:5]):
             # получаем ссылки на страницу событий
             href = soup_href.find('a').get('href')
             full_href = main_url + href
@@ -86,14 +90,11 @@ class ParserEvent:
             id_parse = re.findall("\d+", id_parse_with_letter)[0]
 
             if int(id_parse) == int(last_post): break
-
             if number == 0: new_last_post = id_parse
 
             type_event_site = soup_event.find('div', class_ = 'field-name-field-event-category').find('a').get_text()
             type_event = constant.dictonary_event_peterburg_center[type_event_site]
             title = soup_event.find('h1').get_text()
-            # чтобы не было в дальнейшем ошибок с двойными кавычками убираем их
-            title = title.replace('\"', '')
             img = soup_event.find('div', class_ = 'image-center').find('a').get('href')
             date_start_parse = soup_event.find('div', class_ = 'field-name-field-date-from').find('span').get_text()
             date_stop_parse = soup_event.find('div', class_ = 'field-name-field-date-till').find('span').get_text()
@@ -102,18 +103,12 @@ class ParserEvent:
             if date_start == date_stop: date_stop = None
             try:
                 cost = soup_event.find('div', class_ = 'field-name-field-cost').find('div', class_ = 'field-item even').get_text()
-                cost = cost.replace('руб.', 'рублей')
-                if cost.find('—') != -1:
-                    cost_split = cost.split('—')
-                    cost = f'от {cost_split[0]}до{cost_split[1]}'
+                cost = format.rub_to_ruble(cost)
             except:
                 cost = None
-            discounted = '0'
             address = format.delete_SPB(soup_event.find('div', class_ = 'field-name-field-place').find('div', class_ = 'field-item even').get_text())
             metro = None
-            # ссылка на событие на сайте
-            #full_link = soup_event.find('div', class_ = 'field-name-field-link').find('div', class_ = 'field-item even').get_text()
-        
+       
             event.append((id_parse, type_event, img, title, date_start, date_stop, cost, address, metro, full_href))
 
         return event, new_last_post
@@ -130,11 +125,7 @@ class ParserEvent:
         
         for number, soup_event in enumerate(soup_events):
             type_event_unformat = soup_event.find('div', class_= 'event_type').text.strip()
-            try:
-                type_event = constant.dictonary_event_kuda_spb[type_event_unformat]
-            except:
-                print(type_event_unformat)
-                type_event = 'Разное'
+            type_event = constant.dictonary_event_kuda_spb.get(type_event_unformat, 'Разное')
             img = soup_event.find('img').get('src')
             title = soup_event.find('a', itemprop="url").get('title')
             date_start = format.date_format(soup_event.find('span', itemprop='startDate').text.strip(), '-')
@@ -153,10 +144,9 @@ class ParserEvent:
             full_link = soup_event.find('a', itemprop='url').get('href')
             # на сайте kuda_spb отсутствует id события -> вычисляем его по длине других значений
             id_parse = 2 * len(title) - len(img)
-            if int(id_parse) == int(last_post):
-                break
-            if number == 0:
-                new_last_post = id_parse
+
+            if int(id_parse) == int(last_post): break
+            if number == 0: new_last_post = id_parse
             
             event.append((id_parse, type_event, img, title, date_start, date_stop, cost, address, metro, full_link))
 
@@ -168,10 +158,10 @@ class ParserEvent:
         new_last_post = last_post
         for number, soup_event in enumerate(soup_events):
             id_parse = soup_event.find('footer').attrs['data-calendar-item']
-            if int(id_parse) == int(last_post):
-                break
-            if number == 0:
-                new_last_post = id_parse
+
+            if int(id_parse) == int(last_post): break
+            if number == 0: new_last_post = id_parse
+
             type_event = 'Развлечения' # !!!!!!!!!!
             title = soup_event.find('a', class_='unit_t_a double-hover').get_text()
             # получаем дату события
@@ -218,8 +208,7 @@ class ParserEvent:
         new_last_post = ads[0]['id']
         for ad in ads:
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
-            if ad['id'] == last_post:
-               break
+            if ad['id'] == last_post: break
             # производим получение данных из json для БД
             id_parse  = ad['id']
             type_event_kudago = ad['categories'][0]
@@ -388,7 +377,7 @@ class ParserEvent:
             # определяем метод парсинга сайта
             if (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
                 key = 'kassir'
-                        # получаем данные с очередного сайта
+            # получаем данные с очередного сайта
             info = get_info(value[0], value[1])
             event, new_last_post = self.dispatch(key, last_post, info)
             # если есть новые мероприятия на сайте 

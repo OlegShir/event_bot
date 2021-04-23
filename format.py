@@ -15,8 +15,10 @@ def delete_SPB(string):
     return match
 
 # ТЕСТ
-'''string = 'г. Санкт-Петербург, ул. Советская, 5'
-print(delete_SPB(string))'''
+'''
+string = 'г. Санкт-Петербург, ул. Советская, 5'
+print(delete_SPB(string))
+'''
 
 #_________________________________________________________________
 # метод конкатенации названия площадки и адреса проведения события
@@ -34,9 +36,11 @@ def connect_full_address(name_place, address_place):
     return full_address if full_address else None
 
 # ТЕСТ
-'''name_place = 'Сити-мол'
-   address_place = 'Коломяжский пр., 17к'
-   print(connect_full_address(name_place, address_place))'''
+'''
+name_place = 'Сити-мол'
+address_place = 'Коломяжский пр., 17к'
+print(connect_full_address(name_place, address_place))
+'''
 
 #____________________________________________________
 # метод форматирования даты события сайта fiesta: 
@@ -61,8 +65,10 @@ def fiesta_date_format(date):
     return date_start, date_stop
 
 # ТЕСТ
-'''date = '1 апреля – 3 мая'
-print(fiesta_date_format(date))'''
+'''
+date = '1 апреля – 3 мая'
+print(fiesta_date_format(date))
+'''
 
 #_______________________________________________________
 # метод форматирования даты события сайта kudago, kassir, kuda spb, peterburg_center:
@@ -92,8 +98,8 @@ def date_format(date, type_sep):
         
     return formated_date
 
-'''
 # ТЕСТ
+'''
 date = '2021-04-28 20:00:00'
 print(date_format(date, '-'))
 
@@ -128,5 +134,24 @@ def sep_address_metro(address):
     return address, metro
 
 # ТЕСТ
-'''address = 'БКЗ Октябрьский, Лиговский пр., д.6. ст.м. "Пл. Восстания"'
-print(sep_address_metro(address))'''
+'''
+address = 'БКЗ Октябрьский, Лиговский пр., д.6. ст.м. "Пл. Восстания"'
+print(sep_address_metro(address))
+'''
+
+#_______________________________________________________
+# метод руб. -> 'рублей'
+def rub_to_ruble(cost):
+    new_cost = cost.replace('руб.', 'рублей')
+    if len(re.findall(r'\—', new_cost)) == 1:
+        cost_split = new_cost.split('—')
+        new_cost = f'от {cost_split[0]}до{cost_split[1]}'
+    
+    return new_cost
+
+# ТЕСТ
+'''
+cost = 'Взрослые — 550 руб. Учащиеся — 300 руб. Пенсионеры — 250 руб.'
+cost2 = '150 — 550 руб.'
+print(rub_to_ruble(cost), '\n', rub_to_ruble(cost2))
+'''

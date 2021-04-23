@@ -31,30 +31,34 @@ class geocoderMetro:
 
     @control_class_geocoderMetro
     def get_metro(self, address):
-        # форматируем адрес под Гугл
-        google_address = address.replace(' ', '%20')
-        # создаем строку запроса для Гугл
-        request_url_google = f'{self.base_google}{google_address}'
-        respon_google = get_json(request_url_google)
+        if address:
+            # форматируем адрес под Гугл
+            google_address = address.replace(' ', '%20')
+            # создаем строку запроса для Гугл
+            request_url_google = f'{self.base_google}{google_address}'
+            respon_google = get_json(request_url_google)
 
-        if respon_google['status'] != 'OK': 
-            return
+            if respon_google['status'] != 'OK': 
+                return
+            
+            latitude = respon_google['results'][0]['geometry']['location']['lat']
+            longitude = respon_google['results'][0]['geometry']['location']['lng']
+
+            # создаем строку запроса для Яндекса
+            request_url_yandex = f'{self.base_yandex}{longitude},{latitude}'
+            respon_yandex = get_json(request_url_yandex)
+            metro_full = respon_yandex['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['name']
+
+            metro = metro_full.replace('метро ', '')
         
-        latitude = respon_google['results'][0]['geometry']['location']['lat']
-        longitude = respon_google['results'][0]['geometry']['location']['lng']
-
-        # создаем строку запроса для Яндекса
-        request_url_yandex = f'{self.base_yandex}{longitude},{latitude}'
-        respon_yandex = get_json(request_url_yandex)
-        metro_full = respon_yandex['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['name']
-
-        metro = metro_full.replace('метро ', '')
+        else: metro = None
 
         return metro 
 
 
 # ТЕСТ
-'''address = 'Колпино'
+'''
+address = 'Колпино'
 bs = geocoderMetro()
 merto = bs.get_metro(address)
 print((merto))'''
