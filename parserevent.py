@@ -4,6 +4,8 @@ from sqlighter import SQLighter
 from bs4 import BeautifulSoup as bs
 import json
 import re
+import traceback
+import sys
 
 # декоратор контроя парсинга событий
 def control_parse_events(func):
@@ -136,10 +138,12 @@ class ParserEvent:
             if int(cost_data) == 0:
                 cost = 'Бесплатно'
             else:
-                cost = f'от {cost_data} рублей'            
-            name_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'name').text.strip())
-            address_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'address').text.strip())
-            address = format.connect_full_address(name_place, address_place)
+                cost = f'от {cost_data} рублей'
+            try:       
+                name_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'name').text.strip())
+                address_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'address').text.strip())
+                address = format.connect_full_address(name_place, address_place).strip(())
+            except: address = None
             metro = None
             full_link = soup_event.find('a', itemprop='url').get('href')
             # на сайте kuda_spb отсутствует id события -> вычисляем его по длине других значений
@@ -321,11 +325,12 @@ class ParserEvent:
             # id события
             id_parse = first_part_event['id']
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
-            if id_parse == last_post:
+            if int(id_parse) == int(last_post):
                 break
             # сохраняем id первого мероприятия в полученном списке
             if number == 0:
                 new_last_post = id_parse
+                print((new_last_post))
             # минимальная и максимальная стоимость события
             min_cost = first_part_event['minPrice']
             max_cost = first_part_event['maxPrice']
@@ -375,11 +380,13 @@ class ParserEvent:
             # получаем последнее проверенное мероприятие
             last_post = db.get_last_post(key)
             # определяем метод парсинга сайта
-            if (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
-                key = 'kassir'
-            # получаем данные с очередного сайта
             info = get_info(value[0], value[1])
-            event, new_last_post = self.dispatch(key, last_post, info)
+            
+            if (key == 'kassir_koncert') or (key == 'kassir_teatr') or (key == 'kassir_detyam'):
+                event, new_last_post = self.kassir(key, last_post, info)
+            # получаем данные с очередного сайта
+            else:
+                event, new_last_post = self.dispatch(key, last_post, info)
             # если есть новые мероприятия на сайте 
             if len(event) != 0:
                 # записываем id последнего мероприятия

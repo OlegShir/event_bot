@@ -5,7 +5,7 @@ import constant
 import re
 from geocoderMetro import geocoderMetro
 
-g_m = geocoderMetro()
+geo = geocoderMetro()
 
 class BeautyCaption:
 
@@ -20,41 +20,45 @@ class BeautyCaption:
     
     def get_caption(self):
         # выбор значка эмодзи для события
-        icon_event = constant.dictonary_icon_event[self.event[1]]
+        icon_cap = constant.dictonary_icon_event[self.event[1]]
         
         # установка названия события с большой буквы
-        title = self.event[3][0].upper() + self.event[3][1:]
+        title_cap = self.event[3][0].upper() + self.event[3][1:]
         
         # форматирования даты события: если есть конец -> то 'с ... по ...', иначе только начало, либо ''
         if self.event[4] and self.event[5]:
-            date = f'{constant.data} с {self.event[4]} по {self.event[5]}\n' 
+            date_cap = f'{constant.data} с {self.event[4]} по {self.event[5]}\n' 
         elif self.event[4] and not self.event[5]:
-            date = f'{constant.data} {self.event[4]}\n' 
+            date_cap = f'{constant.data} {self.event[4]}\n' 
         else:
-            date = ''
+            date_cap = ''
         
         # форматирование стоимости события: если она отсутствует -> 'подродности в описании'
-        price = self.event[6] if self.event[6] else 'подродности в описании'
+        price_cap = self.event[6] if self.event[6] else 'подродности в описании'
         
         # если отсутствует адрес
         address_for_link = self.delete_spec_symbol(self.event[7])
-        address = f'{constant.address} <a href=\"https://maps.google.com/?q={address_for_link}\">{self.event[7]}</a>\n' if {self.event[7]} else ''
+        address_cap = f'{constant.address} <a href=\"https://maps.google.com/?q={address_for_link}\">{self.event[7]}</a>\n' if self.event[7] else ''
 
-        # если отсутствует метро
-        if not self.event[8]:
-            metro_station = g_m.get_metro(address_for_link)
-        metro = f'{constant.metro}{metro_station}\n' if metro_station else ''
+
+
+        metro = self.event[8]
+        if not metro:
+            # если отсутствует метро
+            metro = geo.get_metro(address_for_link)
+        metro_cap = f'{constant.metro}<a href=\"https://yandex.ru/maps/2/saint-petersburg/search/метро%20{metro}\"{metro}</a>\n' if metro else ''
                 
-        link =  f'{constant.link} {self.event[9]}'
+        link_cap =  f'{constant.link} {self.event[9]}'
         
-        caption = f'{icon_event} {title}\n\n{date}{constant.price} {price}\n{address}{metro}{link}'
+        caption = f'{icon_cap} {title_cap}\n\n{date_cap}{constant.price} {price_cap}\n{address_cap}{metro_cap}{link_cap}'
 
         return caption
 
-#
-
+#ТЕСТ
+'''
 if __name__ == '__main__':
-    event = ('37265', 'Обучение', 'https://peterburg.center/sites/default/files/img/event_m/2021-03/len-zoo.jpg', 'Библионочь-2021: От зверинца – к зоопарку', '24 апреля 2021', None, None, 'Никольская пл., 2 (Библиотека "Старая Коломна")', None, 'https://peterburg.center/event/biblionoch-2021-ot-zverinca-k-zooparku.html')
+    event = ('37265', 'Обучение', 'https://peterburg.center/sites/default/files/img/event_m/2021-03/len-zoo.jpg', 'Библионочь-2021: От зверинца – к зоопарку', '24 апреля 2021', None, None, None, None, 'https://peterburg.center/event/biblionoch-2021-ot-zverinca-k-zooparku.html')
     bc = BeautyCaption(event)
     caption = bc.get_caption()
     print(caption)
+'''
