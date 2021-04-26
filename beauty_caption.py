@@ -1,8 +1,20 @@
-#(  0         1               2               3            4              5         6     7      8     9)
-#(номер, тип события, ссылка на картинку, заголовок, дата начала, дата оканчания, цена, адрес, метро, ссылка) 
+'''Данный класс выполняет функцию преобразование входных данных о событии в описание поста для Телеграмма.
+   Входным аргументом является список:
+   (номер события, тип события, ссылка на картинку, заголовок, дата начала, дата оканчания, стоимость, адрес события, метро, ссылка) 
+   (      0             1               2               3           4             5             6            7          8       9  )
+   
+   Возвращается описание в html формате (c поддержкой тегов MarkDown) c эмоджи (Э):
 
-import constant
-import re
+   Э Заголовок
+
+   Э Дата события
+   Э Стоимось события
+   Э Адрес события (+ ссылка на Google Maps)
+   Э Ближайшее метро (+ ссылка на Yandex Maps)
+   Э Прямая ссылка на страницу события сайта, где оно парсилось 
+'''
+
+import constant, re
 from geocoderMetro import geocoderMetro
 
 geo = geocoderMetro()
@@ -40,14 +52,12 @@ class BeautyCaption:
         address_for_link = self.delete_spec_symbol(self.event[7])
         address_cap = f'{constant.address} <a href=\"https://maps.google.com/?q={address_for_link}\">{self.event[7]}</a>\n' if self.event[7] else ''
 
-
-
         metro = self.event[8]
         if not metro:
             # если отсутствует метро
             metro = geo.get_metro(address_for_link)
-        metro_cap = f'{constant.metro}<a href=\"https://yandex.ru/maps/2/saint-petersburg/search/метро%20{metro}\"{metro}</a>\n' if metro else ''
-                
+        metro_cap = f'{constant.metro}<a href=\"https://yandex.ru/maps/2/saint-petersburg/search/метро%20{metro}\"> м. {metro}</a>\n' if metro else ''
+        #metro_cap = f'{constant.metro}{metro}' if metro else ''       
         link_cap =  f'{constant.link} {self.event[9]}'
         
         caption = f'{icon_cap} {title_cap}\n\n{date_cap}{constant.price} {price_cap}\n{address_cap}{metro_cap}{link_cap}'

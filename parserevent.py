@@ -1,11 +1,9 @@
-import requests
+import requests, json, re
+from bs4 import BeautifulSoup as bs
+
+# внутренние модули
 import constant, format
 from sqlighter import SQLighter
-from bs4 import BeautifulSoup as bs
-import json
-import re
-import traceback
-import sys
 
 # декоратор контроя парсинга событий
 def control_parse_events(func):
@@ -57,14 +55,16 @@ class ParserEvent:
                           'peterburg_center':['https://peterburg.center/events-next', 'bs4']\
                           
         }
-    # выбор метода парсинга в main_parse в завизимости от ключа self.web_sites
+    
     def dispatch(self, key, last_post, info):
+        '''Позволяет определить метод парсинга в main_parse 
+           в зависимости от значения аргумента ключа self.web_sites'''
         
         method = getattr(self, key)
 
         return method(key, last_post, info)
        
-    # получаем адрес расположение мероприятия для биглиона
+    # получаем адрес расположение события для биглиона
     def data_event(self, url):
         info = get_info(url, 'bs4')
         # производим поиск меток в html начала и окончания мероприятия
@@ -80,7 +80,7 @@ class ParserEvent:
         # получаем список div-ов, содержащих ссылки на страницы событий
         soup_hrefs = info.find('div', class_ = 'views-responsive-grid').find_all('div', class_ = 'card_bottom_right')
         new_last_post = last_post
-        for number, soup_href in enumerate(soup_hrefs[1:5]):
+        for number, soup_href in enumerate(soup_hrefs):
             # получаем ссылки на страницу событий
             href = soup_href.find('a').get('href')
             full_href = main_url + href
@@ -308,7 +308,7 @@ class ParserEvent:
         # создаем пустой список для дальшейшего добавления в него мероприятий
         new_last_post = last_post
         # обрабатываем каждое событие с второго - нулевого нет, первое - реклама
-        for number, soup_event in enumerate(soup_events[2:22]):
+        for number, soup_event in enumerate(soup_events[22:2]):
             # получаем первую часть информации о событии: id, цена, дата, тип 
             json_string = soup_event.find('div', class_='event').attrs['data-ec-item']
             

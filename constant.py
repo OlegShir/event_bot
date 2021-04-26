@@ -1,6 +1,7 @@
 import emoji
 
 API_TOKEN = '1773806846:AAGrojRK_Z5BOc00NW5gfdAb4didLqFrFLc'
+PHOTO_BOT = 1784660311
 ADMIN = 435001186
 API_MINKULT = 'ba512aec28159ce3c015469a67408badcf2cdf9b91f798c782c8c1afc4d4e6a1'
 API_GOOGLE = 'AIzaSyDziuLqMszkbjHKfq-pcL3TKgWN70C7Idw'
@@ -113,7 +114,7 @@ list_month = ("января", "февраля", "марта", "апреля", "�
 # emoji
 data = emoji.emojize(":calendar: ", use_aliases=True)  # 📅
 price = emoji.emojize(":moneybag: ", use_aliases=True)  # 💰
-metro = emoji.emojize(":metro:  м. ", use_aliases=True)  # 🚇
+metro = emoji.emojize(":metro: ", use_aliases=True)  # 🚇
 address = emoji.emojize(":world_map: ", use_aliases=True)  # 🗺️
 raiting = emoji.emojize(":star: ", use_aliases=True)  # 🌟
 link = emoji.emojize(":link: ", use_aliases=True)  # 🔗

@@ -51,4 +51,4 @@ class DashboardYandex:
 '''
 dev = DashboardYandex()
 print(dev.get_limit_apimaps())
-''' 
+'''
