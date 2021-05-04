@@ -59,7 +59,7 @@ async def unsubscribe(message: types.Message):
 @dp.message_handler(commands=['feedback'])
 async def ready_get_feedback(message: types.Message):
 	await Form.feedback_want.set()
-	await bot.send_message(message.chat.id, 'Отправте отзыв')
+	await bot.send_message(message.chat.id, 'Отправьте отзыв')
 
 # декоратор состояния ожидания отзыва
 @dp.message_handler(state=Form.feedback_want)
@@ -87,7 +87,7 @@ async def all_message(message: types.Message):
 		user_data = json.loads(user_data_json)
 		user_id = int(user_data['id'])
 		user_name = user_data.get('first_name', '')
-		await bot.send_message(user_id, f'{user_name}, спасибо за отдзыв.\n{message.text}')
+		await bot.send_message(user_id, f'{user_name}, спасибо за отзыв.\n{message.text}')
 	# filter print(message.text)
 	else:
 		name_user = message.from_user.first_name
@@ -109,8 +109,7 @@ async def scheduled(wait_for):
 					# получаем ссылку на фотографию события
 					photo_url = event[2]
 					# загружаем фотографию события на сервер Телеграмма
-					photo_info = dict(await bot.send_photo(constant.PHOTO_BOT, photo_url))
-					print(photo_info)
+					photo_info = dict(await bot.send_photo(constant.ADMIN, photo_url))
 					# получаем id фото на сервере Телеграмма -> ссылка
 					file_id = photo_info['photo'][0]['file_id']
 					photo_size_width = photo_info['photo'][0]['width']
@@ -136,5 +135,7 @@ async def scheduled(wait_for):
 if __name__ == '__main__':
 	loop = asyncio.get_event_loop()
 	loop.create_task(scheduled(5))
+
+
 	executor.start_polling(dp, skip_updates=True)
 	

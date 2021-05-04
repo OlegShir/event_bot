@@ -139,11 +139,10 @@ class ParserEvent:
                 cost = 'Бесплатно'
             else:
                 cost = f'от {cost_data} рублей'
-            try:       
-                name_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'name').text.strip())
-                address_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'address').text.strip())
-                address = format.connect_full_address(name_place, address_place).strip(())
-            except: address = None
+                 
+            name_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'name').text.strip())
+            address_place = format.delete_SPB(soup_event.find('div', itemprop='location').find('span', itemprop = 'address').text.strip())
+            address = format.connect_full_address(name_place, address_place)
             metro = None
             full_link = soup_event.find('a', itemprop='url').get('href')
             # на сайте kuda_spb отсутствует id события -> вычисляем его по длине других значений
@@ -271,7 +270,9 @@ class ParserEvent:
                 continue
             id_parse  = ad['id']
             type_event_biglion = ad['categoryTitle']
-            type_event = constant.dictonary_event_kudago.get(type_event_biglion, 'Разное')
+            type_event = constant.dictonary_event_biglion.get(type_event_biglion, 'Разное')
+            if type_event == 'Красота' or type_event == 'Здоровье':
+                continue
             img = ad['image']
             title = ad['title']
             priceDiscounted = ad['priceDiscounted']
@@ -308,7 +309,7 @@ class ParserEvent:
         # создаем пустой список для дальшейшего добавления в него мероприятий
         new_last_post = last_post
         # обрабатываем каждое событие с второго - нулевого нет, первое - реклама
-        for number, soup_event in enumerate(soup_events[22:2]):
+        for number, soup_event in enumerate(soup_events[2:28]):
             # получаем первую часть информации о событии: id, цена, дата, тип 
             json_string = soup_event.find('div', class_='event').attrs['data-ec-item']
             
@@ -324,6 +325,7 @@ class ParserEvent:
                     continue
             # id события
             id_parse = first_part_event['id']
+            print((id_parse))
             # производим сравнение id каждого мероприятия с последним обработанным (записанным)
             if int(id_parse) == int(last_post):
                 break
@@ -360,6 +362,7 @@ class ParserEvent:
             img = second_part_event['image']
             # название события
             title = second_part_event['name']
+            print(title)
             # адрес проведения события b наличие годода Санк-Петербур
             address_place, metro = format.sep_address_metro(format.delete_SPB(second_part_event['location']['address']))
             # добавляем перед адресом название места проведения события

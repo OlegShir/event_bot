@@ -26,7 +26,7 @@ class BeautyCaption:
         self.caption = ''
 
     def delete_spec_symbol(self, string):
-        if string: new_string = re.sub(r'\"', '', string)
+        if string: new_string = re.sub(r'\"', '', string).replace(u'\u00ab', '&laquo').replace(u'\u00bb', '&laquo')
         else:  new_string  = string
         return new_string
     
